@@ -6,6 +6,7 @@ import { mockMarkets } from '../data/mock';
 import { DEFAULT_DAILY_GOALS, createDefaultAccount, type UserAccount } from '../features/profile/types';
 import { APP } from '../constants/app';
 import { createId } from '../lib/id';
+import { roundMacro, roundMealComponent } from '../lib/macros';
 import { STORAGE_KEYS } from '../services/storage';
 import {
   LoggedMeal,
@@ -33,12 +34,12 @@ function applyComponentPatch(component: MealComponent, patch: Partial<MealCompon
   const updated = { ...component, ...patch };
   if (patch.weightGrams !== undefined && component.weightGrams > 0) {
     const ratio = patch.weightGrams / component.weightGrams;
-    updated.calories = Math.round(component.calories * ratio);
-    updated.protein = Math.round(component.protein * ratio);
-    updated.carbs = Math.round(component.carbs * ratio);
-    updated.fat = Math.round(component.fat * ratio);
+    updated.calories = roundMacro(component.calories * ratio);
+    updated.protein = roundMacro(component.protein * ratio);
+    updated.carbs = roundMacro(component.carbs * ratio);
+    updated.fat = roundMacro(component.fat * ratio);
   }
-  return updated;
+  return roundMealComponent(updated);
 }
 
 type PersistedSlice = {

@@ -13,7 +13,7 @@ import {
 } from './schemas/meal-plan.schema';
 import { validateMealPlanVariety } from './validate-meal-plan';
 
-const MAX_VARIETY_ATTEMPTS = 2;
+const MAX_VARIETY_ATTEMPTS = 1;
 
 function mockMealPlan(): MealPlanResult {
   return {

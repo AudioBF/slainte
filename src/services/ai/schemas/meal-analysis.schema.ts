@@ -1,13 +1,16 @@
 import { SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
+import { roundMacro, roundMealComponent } from '../../../lib/macros';
+
+const macroInt = z.number().transform(roundMacro);
 
 export const mealComponentSchema = z.object({
   name: z.string(),
-  weightGrams: z.number().positive(),
-  calories: z.number().nonnegative(),
-  protein: z.number().nonnegative(),
-  carbs: z.number().nonnegative(),
-  fat: z.number().nonnegative(),
+  weightGrams: macroInt.pipe(z.number().positive()),
+  calories: macroInt.pipe(z.number().nonnegative()),
+  protein: macroInt.pipe(z.number().nonnegative()),
+  carbs: macroInt.pipe(z.number().nonnegative()),
+  fat: macroInt.pipe(z.number().nonnegative()),
 });
 
 export const mealAnalysisSchema = z.object({
@@ -15,7 +18,10 @@ export const mealAnalysisSchema = z.object({
   components: z.array(mealComponentSchema).min(1),
   confidence: z.enum(['high', 'medium', 'low']).optional(),
   notes: z.string().optional(),
-});
+}).transform((data) => ({
+  ...data,
+  components: data.components.map(roundMealComponent),
+}));
 
 export type MealAnalysisResult = z.infer<typeof mealAnalysisSchema>;
 

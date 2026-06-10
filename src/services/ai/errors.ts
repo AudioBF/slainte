@@ -57,6 +57,10 @@ export function toAiUserMessage(error: unknown): string {
     return 'O Gemini está sobrecarregado no momento. Aguarde alguns segundos e tente de novo.';
   }
 
+  if (isRequestTimeoutError(error)) {
+    return 'A IA demorou demais para responder. Tente novamente — costuma levar 15–30 segundos.';
+  }
+
   if (/API key|401|403|PERMISSION_DENIED/i.test(message)) {
     return 'Chave da API inválida ou sem permissão. Verifique o .env.';
   }
@@ -78,8 +82,17 @@ export function shouldAbortAllModels(error: unknown): boolean {
   return isQuotaExceededError(error);
 }
 
+/** Request exceeded AI_LIMITS.requestTimeoutMs */
+export function isRequestTimeoutError(error: unknown): boolean {
+  return getErrorMessage(error) === 'REQUEST_TIMEOUT';
+}
+
 export function shouldTryNextModel(error: unknown): boolean {
-  return isModelNotFoundError(error) || isTransientUnavailableError(error);
+  return (
+    isModelNotFoundError(error) ||
+    isTransientUnavailableError(error) ||
+    isRequestTimeoutError(error)
+  );
 }
 
 export function shouldRetrySameModel(error: unknown): boolean {

@@ -81,7 +81,7 @@ export default function DietScreen() {
         />
 
         <Button
-          label={generating ? 'Gerando cardápio...' : 'Gerar cardápio da semana'}
+          label={generating ? 'Gerando cardápio… (~20s)' : 'Gerar cardápio da semana'}
           onPress={handleGenerate}
           disabled={generating}
           style={{ marginTop: 12 }}

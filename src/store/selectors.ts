@@ -1,8 +1,9 @@
 import { LoggedMeal, MacroTotals, MealComponent, PlannedMeal } from '../types';
+import { roundMacro } from '../lib/macros';
 import { SLOT_ORDER } from '../constants/meals';
 
 export function sumMacros(meals: LoggedMeal[]): MacroTotals {
-  return meals.reduce(
+  const totals = meals.reduce(
     (acc, meal) => {
       for (const c of meal.components) {
         acc.calories += c.calories;
@@ -14,6 +15,12 @@ export function sumMacros(meals: LoggedMeal[]): MacroTotals {
     },
     { calories: 0, protein: 0, carbs: 0, fat: 0 },
   );
+  return {
+    calories: roundMacro(totals.calories),
+    protein: roundMacro(totals.protein),
+    carbs: roundMacro(totals.carbs),
+    fat: roundMacro(totals.fat),
+  };
 }
 
 export function todayISO() {

@@ -1,5 +1,8 @@
 import { SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
+import { roundMacro } from '../../../lib/macros';
+
+const macroInt = z.number().transform(roundMacro);
 
 const ingredientSchema = z.object({
   name: z.string(),
@@ -12,10 +15,10 @@ const recipeSchema = z.object({
   servings: z.number().positive(),
   ingredients: z.array(ingredientSchema),
   steps: z.array(z.string()),
-  caloriesPerServing: z.number().nonnegative(),
-  proteinPerServing: z.number().nonnegative(),
-  carbsPerServing: z.number().nonnegative(),
-  fatPerServing: z.number().nonnegative(),
+  caloriesPerServing: macroInt.pipe(z.number().nonnegative()),
+  proteinPerServing: macroInt.pipe(z.number().nonnegative()),
+  carbsPerServing: macroInt.pipe(z.number().nonnegative()),
+  fatPerServing: macroInt.pipe(z.number().nonnegative()),
 });
 
 const plannedMealSchema = z.object({
@@ -25,10 +28,10 @@ const plannedMealSchema = z.object({
   time: z.string(),
   name: z.string(),
   recipeId: z.string().optional(),
-  calories: z.number().nonnegative(),
-  protein: z.number().nonnegative(),
-  carbs: z.number().nonnegative(),
-  fat: z.number().nonnegative(),
+  calories: macroInt.pipe(z.number().nonnegative()),
+  protein: macroInt.pipe(z.number().nonnegative()),
+  carbs: macroInt.pipe(z.number().nonnegative()),
+  fat: macroInt.pipe(z.number().nonnegative()),
 });
 
 export const mealPlanSchema = z.object({

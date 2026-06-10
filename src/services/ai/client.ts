@@ -12,6 +12,19 @@ import {
   sleep,
 } from './errors';
 
+function maxRetriesForTask(task: AiTask): number {
+  return task === 'mealPlan' ? AI_LIMITS.mealPlanMaxRetries : AI_LIMITS.maxRetries;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('REQUEST_TIMEOUT')), ms);
+    }),
+  ]);
+}
+
 let client: GoogleGenerativeAI | null = null;
 
 function getClient(): GoogleGenerativeAI {
@@ -70,7 +83,10 @@ async function requestOnce<T>(
     });
   }
 
-  const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
+  const result = await withTimeout(
+    model.generateContent({ contents: [{ role: 'user', parts }] }),
+    AI_LIMITS.requestTimeoutMs,
+  );
   const text = result.response.text();
 
   if (!text) {
@@ -87,7 +103,7 @@ export async function generateStructuredJson<T>(options: GenerateJsonOptions): P
   for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
     const modelName = models[modelIndex];
 
-    for (let attempt = 0; attempt <= AI_LIMITS.maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= maxRetriesForTask(options.task); attempt++) {
       try {
         return await requestOnce<T>(modelName, options);
       } catch (error) {
@@ -104,12 +120,12 @@ export async function generateStructuredJson<T>(options: GenerateJsonOptions): P
         }
 
         const retryDelay = parseRetryAfterMs(error);
-        if (retryDelay && attempt < AI_LIMITS.maxRetries) {
+        if (retryDelay && attempt < maxRetriesForTask(options.task)) {
           await sleep(retryDelay);
           continue;
         }
 
-        if (isTransientUnavailableError(error) && attempt < AI_LIMITS.maxRetries) {
+        if (isTransientUnavailableError(error) && attempt < maxRetriesForTask(options.task)) {
           await sleep(1000 * (attempt + 1));
           continue;
         }

@@ -47,19 +47,24 @@ export default function MealScreen() {
     if (isMealSlot(params.slot)) setSlot(params.slot);
   }, [params.slot]);
 
-  const totals = useMemo(
-    () =>
-      photoDraft?.reduce(
-        (acc, c) => ({
-          calories: acc.calories + c.calories,
-          protein: acc.protein + c.protein,
-          carbs: acc.carbs + c.carbs,
-          fat: acc.fat + c.fat,
-        }),
-        { calories: 0, protein: 0, carbs: 0, fat: 0 },
-      ),
-    [photoDraft],
-  );
+  const totals = useMemo(() => {
+    if (!photoDraft?.length) return null;
+    const raw = photoDraft.reduce(
+      (acc, c) => ({
+        calories: acc.calories + c.calories,
+        protein: acc.protein + c.protein,
+        carbs: acc.carbs + c.carbs,
+        fat: acc.fat + c.fat,
+      }),
+      { calories: 0, protein: 0, carbs: 0, fat: 0 },
+    );
+    return {
+      calories: Math.round(raw.calories),
+      protein: Math.round(raw.protein),
+      carbs: Math.round(raw.carbs),
+      fat: Math.round(raw.fat),
+    };
+  }, [photoDraft]);
 
   function applyAsset(asset: ImagePicker.ImagePickerAsset) {
     setImageUri(asset.uri);
