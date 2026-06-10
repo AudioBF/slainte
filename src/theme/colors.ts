@@ -1,0 +1,17 @@
+export const colors = {
+  forest: '#1B4332',
+  sage: '#52796F',
+  orange: '#E07B39',
+  gold: '#F4B942',
+  navy: '#1A2744',
+  cream: '#F5F0E8',
+  white: '#FFFFFF',
+  text: '#1B4332',
+  textMuted: '#52796F',
+  textOnDark: '#F5F0E8',
+  border: '#D4CFC4',
+  success: '#2D6A4F',
+  protein: '#E07B39',
+  carbs: '#F4B942',
+  fat: '#52796F',
+} as const;

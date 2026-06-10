@@ -1,25 +1,47 @@
 {
   "expo": {
-    "name": "Slainte",
-    "slug": "Slainte",
+    "name": "Sláinte",
+    "slug": "slainte",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "slainte",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1B4332"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "O Sláinte usa a câmera para fotografar suas refeições.",
+        "NSPhotoLibraryUsageDescription": "O Sláinte acessa suas fotos para analisar refeições."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1B4332",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundImage": "./assets/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-splash-screen",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Sláinte acessa suas fotos para analisar refeições.",
+          "cameraPermission": "O Sláinte usa a câmera para fotografar suas refeições."
+        }
+      ],
+      "expo-image"
+    ]
   }
 }
