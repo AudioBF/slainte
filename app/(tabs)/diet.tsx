@@ -5,7 +5,9 @@ import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
 import { Header } from '../../src/components/Header';
+import { LoadingState } from '../../src/components/LoadingState';
 import { Screen } from '../../src/components/Screen';
+import { MEAL_PLAN_MESSAGES } from '../../src/constants/ai-messages';
 import { useMealPlanGenerator } from '../../src/features/diet';
 import { isPlannedMealLoggedToday } from '../../src/store/selectors';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -87,6 +89,7 @@ export default function DietScreen() {
           style={{ marginTop: 12 }}
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {generating ? <LoadingState messages={MEAL_PLAN_MESSAGES} active={generating} /> : null}
       </Card>
 
       {mealPlanSummary ? (

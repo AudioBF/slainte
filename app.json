@@ -28,7 +28,15 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "name": "Sláinte — nutrição em Dublin",
+      "shortName": "Sláinte",
+      "description": "Planeje refeições, registre pratos e acompanhe macros.",
+      "themeColor": "#1B4332",
+      "backgroundColor": "#1B4332",
+      "display": "standalone",
+      "orientation": "portrait",
+      "lang": "pt-BR"
     },
     "plugins": [
       "expo-router",

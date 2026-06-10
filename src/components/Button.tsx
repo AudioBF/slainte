@@ -14,6 +14,9 @@ export function Button({ label, onPress, variant = 'primary', style, disabled }:
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         styles.base,
         variant === 'primary' && styles.primary,
@@ -39,10 +42,12 @@ export function Button({ label, onPress, variant = 'primary', style, disabled }:
 
 const styles = StyleSheet.create({
   base: {
+    minHeight: 44,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   primary: {
     backgroundColor: colors.forest,

@@ -14,6 +14,7 @@ import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { Header } from '../../src/components/Header';
 import { LoadingState } from '../../src/components/LoadingState';
+import { MEAL_ANALYSIS_MESSAGES } from '../../src/constants/ai-messages';
 import { Screen } from '../../src/components/Screen';
 import { isMealSlot, MEAL_SLOTS, SLOT_SHORT } from '../../src/constants/meals';
 import { useMealAnalysis } from '../../src/features/meal';
@@ -167,7 +168,7 @@ export default function MealScreen() {
             style={{ marginTop: 12 }}
           />
         )}
-        {analyzing && <LoadingState message="Identificando componentes do prato..." />}
+        {analyzing && <LoadingState messages={MEAL_ANALYSIS_MESSAGES} active={analyzing} />}
         {analyzeError ? (
           <Text style={[typography.caption, styles.error]}>{analyzeError}</Text>
         ) : null}

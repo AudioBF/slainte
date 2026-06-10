@@ -25,6 +25,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabLabel,
+        tabBarItemStyle: styles.tabItem,
       }}
     >
       <Tabs.Screen
@@ -77,5 +78,8 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontFamily: 'Outfit_500Medium',
     fontSize: 11,
+  },
+  tabItem: {
+    minHeight: 48,
   },
 });

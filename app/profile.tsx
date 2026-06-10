@@ -222,6 +222,13 @@ export default function ProfileScreen() {
       />
 
       <Button
+        label="Privacidade e dados"
+        onPress={() => router.push('/privacy')}
+        variant="outline"
+        style={{ marginTop: 10 }}
+      />
+
+      <Button
         label="Voltar"
         onPress={() => router.back()}
         variant="outline"

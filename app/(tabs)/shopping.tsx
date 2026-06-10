@@ -4,8 +4,11 @@ import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
 import { Header } from '../../src/components/Header';
+import { LoadingState } from '../../src/components/LoadingState';
 import { Screen } from '../../src/components/Screen';
+import { SHOPPING_LIST_MESSAGES } from '../../src/constants/ai-messages';
 import { useShoppingListGenerator } from '../../src/features/shopping';
+import { hapticLight } from '../../src/lib/haptics';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
@@ -24,6 +27,11 @@ export default function ShoppingScreen() {
 
   const checked = shopping.filter((i) => i.checked).length;
   const hasPlan = plannedMeals.length > 0;
+
+  function handleToggle(id: string) {
+    hapticLight();
+    toggleShoppingItem(id);
+  }
 
   async function handleGenerate() {
     await generate();
@@ -57,6 +65,9 @@ export default function ShoppingScreen() {
           <Text style={styles.hint}>Gere um cardápio na aba Dieta para usar esta opção.</Text>
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {generating ? (
+          <LoadingState messages={SHOPPING_LIST_MESSAGES} active={generating} />
+        ) : null}
         {checked > 0 ? (
           <Button
             label="Limpar itens marcados"
@@ -82,12 +93,18 @@ export default function ShoppingScreen() {
         shopping.map((item) => (
           <Card key={item.id} style={item.checked ? styles.checkedCard : undefined}>
             <View style={styles.itemRow}>
-              <Pressable onPress={() => toggleShoppingItem(item.id)} style={styles.checkArea}>
+              <Pressable
+                onPress={() => handleToggle(item.id)}
+                style={styles.checkArea}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: item.checked }}
+                accessibilityLabel={`${item.name}, ${item.quantity}`}
+              >
                 <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
                   {item.checked && <Text style={styles.checkmark}>✓</Text>}
                 </View>
               </Pressable>
-              <Pressable onPress={() => toggleShoppingItem(item.id)} style={{ flex: 1 }}>
+              <Pressable onPress={() => handleToggle(item.id)} style={{ flex: 1 }}>
                 <Text style={[typography.subtitle, item.checked && styles.checkedText]}>
                   {item.name}
                 </Text>
@@ -156,6 +173,10 @@ const styles = StyleSheet.create({
   },
   checkArea: {
     padding: 2,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkbox: {
     width: 24,
