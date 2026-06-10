@@ -1,7 +1,7 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
-import { Header } from '../../src/components/Header';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Screen } from '../../src/components/Screen';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
@@ -27,10 +27,9 @@ export default function MarketsScreen() {
 
   return (
     <Screen>
-      <Header
+      <ScreenHeader
         title="Mercados"
         subtitle="Supermercados de Dublin — encontre o mais próximo"
-        dark
       />
 
       <Text style={[typography.body, styles.intro]}>

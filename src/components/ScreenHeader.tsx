@@ -1,14 +1,19 @@
+import { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme/colors';
 import { APP } from '../constants/app';
+import { colors } from '../theme/colors';
 import { Avatar } from './Avatar';
 import { LogoIcon } from './LogoIcon';
 
 type Props = {
-  avatarUri?: string | null;
+  title: string;
+  subtitle?: string;
+  /** Aba Hoje — saudação + branding */
+  home?: boolean;
   displayName?: string;
+  avatarUri?: string | null;
   onAvatarPress?: () => void;
-  showGreeting?: boolean;
+  right?: ReactNode;
 };
 
 function getGreeting(): string {
@@ -18,21 +23,43 @@ function getGreeting(): string {
   return 'Boa noite';
 }
 
-export function AppHeader({ avatarUri, displayName, onAvatarPress, showGreeting }: Props) {
+export function ScreenHeader({
+  title,
+  subtitle,
+  home,
+  displayName,
+  avatarUri,
+  onAvatarPress,
+  right,
+}: Props) {
+  const showGreeting = home && displayName;
+
   return (
-    <View style={styles.banner}>
+    <View style={styles.banner} accessibilityRole="header">
       <LogoIcon size={40} variant="dark" />
       <View style={styles.textBlock}>
-        {showGreeting && displayName ? (
+        {showGreeting ? (
           <Text style={styles.greeting}>
             {getGreeting()}, {displayName}
           </Text>
         ) : null}
-        <Text style={styles.title}>{APP.name}</Text>
-        <Text style={styles.tagline}>{APP.tagline}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {home ? APP.name : title}
+        </Text>
+        {(home ? APP.tagline : subtitle) ? (
+          <Text style={styles.subtitle} numberOfLines={2}>
+            {home ? APP.tagline : subtitle}
+          </Text>
+        ) : null}
       </View>
+      {right}
       {onAvatarPress ? (
-        <Pressable onPress={onAvatarPress}>
+        <Pressable
+          onPress={onAvatarPress}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir perfil"
+          hitSlop={8}
+        >
           <Avatar uri={avatarUri ?? null} name={displayName} size={44} />
         </Pressable>
       ) : null}
@@ -49,9 +76,15 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
     gap: 12,
+    shadowColor: colors.forest,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   textBlock: {
     flex: 1,
+    minWidth: 0,
   },
   greeting: {
     fontFamily: 'Outfit_400Regular',
@@ -65,7 +98,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: colors.textOnDark,
   },
-  tagline: {
+  subtitle: {
     fontFamily: 'Outfit_400Regular',
     fontSize: 13,
     color: colors.textOnDark,

@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
-import { Header } from '../../src/components/Header';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { LoadingState } from '../../src/components/LoadingState';
 import { Screen } from '../../src/components/Screen';
 import { MEAL_PLAN_MESSAGES } from '../../src/constants/ai-messages';
@@ -53,7 +53,7 @@ export default function DietScreen() {
 
   return (
     <Screen>
-      <Header title="Dieta" subtitle="Cardápio semanal com meal-prep" />
+      <ScreenHeader title="Dieta" subtitle="Cardápio semanal com meal-prep" />
 
       <Card>
         <Text style={typography.label}>Objetivo</Text>

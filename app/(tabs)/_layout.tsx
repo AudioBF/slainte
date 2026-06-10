@@ -71,9 +71,15 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.white,
     borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
     height: 64,
     paddingBottom: 8,
     paddingTop: 4,
+    shadowColor: colors.forest,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
   },
   tabLabel: {
     fontFamily: 'Outfit_500Medium',

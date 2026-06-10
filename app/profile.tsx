@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Avatar } from '../src/components/Avatar';
 import { Button } from '../src/components/Button';
 import { Card } from '../src/components/Card';
-import { Header } from '../src/components/Header';
+import { ScreenHeader } from '../src/components/ScreenHeader';
 import { Screen } from '../src/components/Screen';
 import { signOut, useAuth } from '../src/features/auth';
 import { DEFAULT_DAILY_GOALS, type ProfileGoal } from '../src/features/profile';
@@ -83,7 +83,7 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <Header title="Perfil" subtitle="Seus dados e metas" />
+      <ScreenHeader title="Perfil" subtitle="Seus dados e metas" />
 
       <Card>
         <View style={styles.avatarRow}>

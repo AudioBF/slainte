@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
-import { Header } from '../src/components/Header';
+import { ScreenHeader } from '../src/components/ScreenHeader';
 import { Screen } from '../src/components/Screen';
 import { colors } from '../src/theme/colors';
 import { typography } from '../src/theme/typography';
@@ -39,7 +39,7 @@ export default function PrivacyScreen() {
 
   return (
     <Screen>
-      <Header title="Privacidade" subtitle="Como tratamos seus dados" />
+      <ScreenHeader title="Privacidade" subtitle="Como tratamos seus dados" />
 
       {SECTIONS.map((section) => (
         <View key={section.title} style={styles.section}>

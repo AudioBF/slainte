@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppHeader } from '../../src/components/AppHeader';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { CalorieRing } from '../../src/components/CalorieRing';
 import { Card } from '../../src/components/Card';
 import { ComparisonBars } from '../../src/components/ComparisonBars';
@@ -98,8 +98,9 @@ export default function TodayScreen() {
 
   return (
     <Screen>
-      <AppHeader
-        showGreeting
+      <ScreenHeader
+        home
+        title="Hoje"
         displayName={profile.displayName || undefined}
         avatarUri={profile.avatarUri}
         onAvatarPress={() => router.push('/profile')}

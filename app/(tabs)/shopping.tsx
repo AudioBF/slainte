@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
-import { Header } from '../../src/components/Header';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { LoadingState } from '../../src/components/LoadingState';
 import { Screen } from '../../src/components/Screen';
 import { SHOPPING_LIST_MESSAGES } from '../../src/constants/ai-messages';
@@ -46,7 +46,7 @@ export default function ShoppingScreen() {
 
   return (
     <Screen>
-      <Header title="Compras" subtitle="Lista gerada do seu cardápio" />
+      <ScreenHeader title="Compras" subtitle="Lista gerada do seu cardápio" />
 
       <Card>
         <View style={styles.summaryRow}>

@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
-import { Header } from '../../src/components/Header';
+import { LogoIcon } from '../../src/components/LogoIcon';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { LoadingState } from '../../src/components/LoadingState';
 import { MEAL_ANALYSIS_MESSAGES } from '../../src/constants/ai-messages';
 import { Screen } from '../../src/components/Screen';
@@ -132,7 +133,7 @@ export default function MealScreen() {
 
   return (
     <Screen>
-      <Header
+      <ScreenHeader
         title="Refeição"
         subtitle="Fotografe o prato — a IA estima calorias e macros"
       />
@@ -152,8 +153,10 @@ export default function MealScreen() {
           <Image source={{ uri: imageUri }} style={styles.preview} />
         ) : (
           <View style={styles.placeholder}>
-            <Text style={styles.placeholderIcon}>◉</Text>
-            <Text style={typography.body}>Tire uma foto ou escolha da galeria</Text>
+            <LogoIcon size={56} variant="light" />
+            <Text style={[typography.body, styles.placeholderText]}>
+              Tire uma foto ou escolha da galeria
+            </Text>
           </View>
         )}
         <View style={styles.photoActions}>
@@ -277,20 +280,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   placeholder: {
-    height: 180,
-    borderRadius: 12,
+    height: 200,
+    borderRadius: 16,
     backgroundColor: colors.cream,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
     borderStyle: 'dashed',
+    gap: 12,
   },
-  placeholderIcon: {
-    fontSize: 40,
-    color: colors.sage,
-    marginBottom: 8,
+  placeholderText: {
+    textAlign: 'center',
+    paddingHorizontal: 24,
   },
   photoActions: {
     flexDirection: 'row',

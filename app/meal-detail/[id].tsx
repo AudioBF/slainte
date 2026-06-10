@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
-import { Header } from '../../src/components/Header';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Screen } from '../../src/components/Screen';
 import { MEAL_SLOTS, SLOT_LABELS, SLOT_SHORT } from '../../src/constants/meals';
 import { createId } from '../../src/lib/id';
@@ -43,7 +43,7 @@ export default function MealDetailScreen() {
   if (!meal) {
     return (
       <Screen>
-        <Header title="Refeição" subtitle="Registro não encontrado" />
+        <ScreenHeader title="Refeição" subtitle="Registro não encontrado" />
         <Card>
           <Text style={typography.body}>Esta refeição não existe mais ou foi removida.</Text>
         </Card>
@@ -95,7 +95,7 @@ export default function MealDetailScreen() {
 
   return (
     <Screen>
-      <Header title="Editar refeição" subtitle={SLOT_LABELS[currentMeal.slot]} />
+      <ScreenHeader title="Editar refeição" subtitle={SLOT_LABELS[currentMeal.slot]} />
 
       <Card>
         <Text style={typography.label}>Nome</Text>

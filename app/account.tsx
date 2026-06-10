@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { Card } from '../src/components/Card';
-import { Header } from '../src/components/Header';
+import { ScreenHeader } from '../src/components/ScreenHeader';
 import { Screen } from '../src/components/Screen';
 import { signInWithEmail, signUpWithEmail, signOut, useAuth, manualSync } from '../src/features/auth';
 import { hasSupabase } from '../src/lib/env';
@@ -62,7 +62,7 @@ export default function AccountScreen() {
   if (!hasSupabase()) {
     return (
       <Screen>
-        <Header title="Conta" subtitle="Sincronização na nuvem" />
+        <ScreenHeader title="Conta" subtitle="Sincronização na nuvem" />
         <Card>
           <Text style={typography.body}>
             Supabase ainda não está configurado. Adicione `EXPO_PUBLIC_SUPABASE_URL` e
@@ -77,7 +77,7 @@ export default function AccountScreen() {
   if (isSignedIn && user) {
     return (
       <Screen>
-        <Header title="Conta" subtitle="Seus dados na nuvem" />
+        <ScreenHeader title="Conta" subtitle="Seus dados na nuvem" />
         <Card>
           <Text style={typography.label}>E-mail</Text>
           <Text style={typography.subtitle}>{user.email}</Text>
@@ -116,7 +116,7 @@ export default function AccountScreen() {
 
   return (
     <Screen>
-      <Header title="Conta" subtitle="Entre para sincronizar entre dispositivos" />
+      <ScreenHeader title="Conta" subtitle="Entre para sincronizar entre dispositivos" />
 
       <Card>
         <View style={styles.modeRow}>
