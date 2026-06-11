@@ -12,18 +12,31 @@ import {
 } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
+import { ChipGroup } from '../../src/components/ChipGroup';
 import { LogoIcon } from '../../src/components/LogoIcon';
-import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { LoadingState } from '../../src/components/LoadingState';
-import { MEAL_ANALYSIS_MESSAGES } from '../../src/constants/ai-messages';
+import { PrimaryActionBar } from '../../src/components/PrimaryActionBar';
 import { Screen } from '../../src/components/Screen';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
+import { Section } from '../../src/components/Section';
+import { StatPill } from '../../src/components/StatPill';
+import { StepIndicator } from '../../src/components/StepIndicator';
+import { MEAL_ANALYSIS_MESSAGES } from '../../src/constants/ai-messages';
 import { isMealSlot, MEAL_SLOTS, SLOT_SHORT } from '../../src/constants/meals';
 import { useMealAnalysis } from '../../src/features/meal';
 import { createId } from '../../src/lib/id';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
+import { radius, spacing } from '../../src/theme/tokens';
 import { typography } from '../../src/theme/typography';
 import { MealSlot } from '../../src/types';
+
+const MEAL_STEPS = ['Foto', 'Análise', 'Revisar'] as const;
+
+const SLOT_OPTIONS = MEAL_SLOTS.map((s) => ({
+  value: s,
+  label: SLOT_SHORT[s],
+}));
 
 export default function MealScreen() {
   const params = useLocalSearchParams<{ slot?: string; name?: string; plannedId?: string }>();
@@ -48,6 +61,8 @@ export default function MealScreen() {
   useEffect(() => {
     if (isMealSlot(params.slot)) setSlot(params.slot);
   }, [params.slot]);
+
+  const stepIndex = !imageUri ? 0 : !photoDraft ? 1 : 2;
 
   const totals = useMemo(() => {
     if (!photoDraft?.length) return null;
@@ -132,195 +147,191 @@ export default function MealScreen() {
   }
 
   return (
-    <Screen>
-      <ScreenHeader
-        title="Refeição"
-        subtitle="Fotografe o prato — a IA estima calorias e macros"
-      />
+    <View style={styles.root}>
+      <Screen footerSpace={photoDraft ? 88 + 64 : 0}>
+        <ScreenHeader
+          title="Refeição"
+          subtitle="Fotografe o prato — a IA estima calorias e macros"
+        />
 
-      {plannedName ? (
-        <Card style={styles.planHint}>
-          <Text style={typography.label}>Do cardápio</Text>
-          <Text style={typography.subtitle}>{plannedName}</Text>
+        <StepIndicator steps={MEAL_STEPS} currentIndex={stepIndex} />
+
+        {plannedName ? (
+          <Card style={styles.planHint}>
+            <Text style={typography.label}>Do cardápio</Text>
+            <Text style={typography.subtitle}>{plannedName}</Text>
+          </Card>
+        ) : null}
+
+        {!photoDraft ? (
+          <>
+            <Section title="Tipo de refeição" subtitle="Selecione antes de analisar">
+              <ChipGroup options={SLOT_OPTIONS} value={slot} onChange={setSlot} />
+            </Section>
+
+            <Card>
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={styles.preview} />
+              ) : (
+                <View style={styles.placeholder}>
+                  <LogoIcon size={56} variant="light" />
+                  <Text style={[typography.body, styles.placeholderText]}>
+                    Tire uma foto ou escolha da galeria
+                  </Text>
+                </View>
+              )}
+              <View style={styles.photoActions}>
+                <Button label="Câmera" onPress={takePhoto} variant="outline" style={styles.halfBtn} />
+                <Button label="Galeria" onPress={pickImage} variant="outline" style={styles.halfBtn} />
+              </View>
+              {imageUri && (
+                <Button
+                  label={analyzing ? 'Analisando...' : 'Analisar com IA'}
+                  onPress={handleAnalyze}
+                  disabled={analyzing || !imageBase64}
+                  style={{ marginTop: spacing.md }}
+                />
+              )}
+              {analyzing && <LoadingState messages={MEAL_ANALYSIS_MESSAGES} active={analyzing} />}
+              {analyzeError ? (
+                <Text style={[typography.caption, styles.error]}>{analyzeError}</Text>
+              ) : null}
+            </Card>
+          </>
+        ) : (
+          <>
+            <Section
+              title="Componentes detectados"
+              subtitle="Ajuste o peso — os valores recalculam automaticamente"
+            />
+
+            {photoDraft.map((comp) => (
+              <Card key={comp.id}>
+                <View style={styles.compHeader}>
+                  <Text style={[typography.subtitle, styles.compTitle]}>{comp.name}</Text>
+                  <Pressable
+                    onPress={() => removePhotoComponent(comp.id)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.removeLabel}>Remover</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.weightRow}>
+                  <Text style={typography.caption}>Peso (g)</Text>
+                  <TextInput
+                    style={styles.weightInput}
+                    keyboardType="numeric"
+                    value={String(comp.weightGrams)}
+                    onChangeText={(t) => {
+                      const grams = parseInt(t, 10);
+                      if (!isNaN(grams) && grams > 0) {
+                        updatePhotoComponent(comp.id, { weightGrams: grams });
+                      }
+                    }}
+                  />
+                </View>
+                <StatPill
+                  compact
+                  calories={comp.calories}
+                  protein={comp.protein}
+                  carbs={comp.carbs}
+                  fat={comp.fat}
+                />
+              </Card>
+            ))}
+
+            <Card>
+              <Text style={typography.subtitle}>Adicionar item esquecido</Text>
+              <View style={styles.addRow}>
+                <TextInput
+                  style={styles.addInput}
+                  placeholder="Ex: cebola caramelizada"
+                  placeholderTextColor={colors.textMuted}
+                  value={newItemName}
+                  onChangeText={setNewItemName}
+                />
+                <Button label="+" onPress={handleAddItem} style={styles.addBtn} />
+              </View>
+            </Card>
+
+            {totals && (
+              <Card style={styles.totalCard}>
+                <Text style={typography.label}>Total estimado · IA</Text>
+                <Text style={styles.totalValue}>{totals.calories} kcal</Text>
+                <StatPill
+                  protein={totals.protein}
+                  carbs={totals.carbs}
+                  fat={totals.fat}
+                />
+              </Card>
+            )}
+
+            <Section title="Registrar como">
+              <ChipGroup options={SLOT_OPTIONS} value={slot} onChange={setSlot} />
+            </Section>
+          </>
+        )}
+
+        <Card style={styles.disclaimer}>
           <Text style={typography.caption}>
-            Slot pré-selecionado: {SLOT_SHORT[slot]}
+            Estimativas por IA — boas para tendências, mas editáveis. Para precisão máxima, use uma balança.
           </Text>
         </Card>
+      </Screen>
+
+      {photoDraft ? (
+        <PrimaryActionBar label="Registrar no dia" onPress={handleConfirm} aboveTabBar />
       ) : null}
-
-      <Card>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.preview} />
-        ) : (
-          <View style={styles.placeholder}>
-            <LogoIcon size={56} variant="light" />
-            <Text style={[typography.body, styles.placeholderText]}>
-              Tire uma foto ou escolha da galeria
-            </Text>
-          </View>
-        )}
-        <View style={styles.photoActions}>
-          <Button label="Câmera" onPress={takePhoto} variant="outline" style={styles.halfBtn} />
-          <Button label="Galeria" onPress={pickImage} variant="outline" style={styles.halfBtn} />
-        </View>
-        {imageUri && !photoDraft && (
-          <Button
-            label={analyzing ? 'Analisando...' : 'Analisar com IA'}
-            onPress={handleAnalyze}
-            disabled={analyzing || !imageBase64}
-            style={{ marginTop: 12 }}
-          />
-        )}
-        {analyzing && <LoadingState messages={MEAL_ANALYSIS_MESSAGES} active={analyzing} />}
-        {analyzeError ? (
-          <Text style={[typography.caption, styles.error]}>{analyzeError}</Text>
-        ) : null}
-      </Card>
-
-      {photoDraft && (
-        <>
-          <Text style={[typography.subtitle, styles.section]}>Componentes detectados</Text>
-          <Text style={[typography.caption, styles.hint]}>
-            Ajuste o peso de cada item — os valores recalculam automaticamente.
-          </Text>
-
-          {photoDraft.map((comp) => (
-            <Card key={comp.id}>
-              <View style={styles.compHeader}>
-                <Text style={[typography.subtitle, styles.compTitle]}>{comp.name}</Text>
-                <Pressable
-                  onPress={() => removePhotoComponent(comp.id)}
-                  hitSlop={8}
-                  style={styles.removeBtn}
-                >
-                  <Text style={styles.removeLabel}>Remover</Text>
-                </Pressable>
-              </View>
-              <View style={styles.weightRow}>
-                <Text style={typography.caption}>Peso (g)</Text>
-                <TextInput
-                  style={styles.weightInput}
-                  keyboardType="numeric"
-                  value={String(comp.weightGrams)}
-                  onChangeText={(t) => {
-                    const grams = parseInt(t, 10);
-                    if (!isNaN(grams) && grams > 0) {
-                      updatePhotoComponent(comp.id, { weightGrams: grams });
-                    }
-                  }}
-                />
-              </View>
-              <Text style={typography.caption}>
-                {comp.calories} kcal · P {comp.protein}g · C {comp.carbs}g · G {comp.fat}g
-              </Text>
-            </Card>
-          ))}
-
-          <Card>
-            <Text style={typography.subtitle}>Adicionar item esquecido</Text>
-            <View style={styles.addRow}>
-              <TextInput
-                style={styles.addInput}
-                placeholder="Ex: cebola caramelizada"
-                placeholderTextColor={colors.textMuted}
-                value={newItemName}
-                onChangeText={setNewItemName}
-              />
-              <Button label="+" onPress={handleAddItem} style={styles.addBtn} />
-            </View>
-          </Card>
-
-          {totals && (
-            <Card>
-              <Text style={typography.subtitle}>Total estimado</Text>
-              <Text style={styles.totalValue}>{totals.calories} kcal</Text>
-              <Text style={typography.caption}>
-                P {totals.protein}g · C {totals.carbs}g · G {totals.fat}g
-              </Text>
-            </Card>
-          )}
-
-          <Text style={[typography.label, styles.section]}>Registrar como</Text>
-          <View style={styles.slotRow}>
-            {MEAL_SLOTS.map((s) => (
-              <Pressable
-                key={s}
-                onPress={() => setSlot(s)}
-                style={[styles.slotChip, slot === s && styles.slotChipActive]}
-              >
-                <Text style={[styles.slotLabel, slot === s && styles.slotLabelActive]}>
-                  {SLOT_SHORT[s]}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Button label="Registrar no dia" onPress={handleConfirm} />
-        </>
-      )}
-
-      <Card style={styles.disclaimer}>
-        <Text style={typography.caption}>
-          Estimativas por IA — boas para tendências, mas editáveis. Para precisão máxima, use uma balança.
-        </Text>
-      </Card>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   planHint: {
     backgroundColor: colors.cream,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   preview: {
     width: '100%',
     height: 220,
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
   },
   placeholder: {
     height: 200,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     backgroundColor: colors.cream,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
     borderWidth: 2,
     borderColor: colors.border,
     borderStyle: 'dashed',
-    gap: 12,
+    gap: spacing.md,
   },
   placeholderText: {
     textAlign: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
   },
   photoActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: spacing.sm,
   },
   halfBtn: {
     flex: 1,
-  },
-  section: {
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  hint: {
-    marginBottom: 12,
   },
   compHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: spacing.sm,
   },
   compTitle: {
     flex: 1,
-  },
-  removeBtn: {
-    paddingVertical: 2,
-    paddingHorizontal: 4,
   },
   removeLabel: {
     fontFamily: 'Outfit_500Medium',
@@ -331,74 +342,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginVertical: 8,
+    marginVertical: spacing.sm,
   },
   weightInput: {
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 18,
     color: colors.forest,
     backgroundColor: colors.cream,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
     minWidth: 80,
     textAlign: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   addRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   addInput: {
     flex: 1,
     fontFamily: 'Outfit_400Regular',
     fontSize: 15,
     backgroundColor: colors.cream,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   addBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  totalCard: {
+    backgroundColor: colors.cream,
   },
   totalValue: {
     fontFamily: 'Fraunces_700Bold',
-    fontSize: 28,
+    fontSize: 32,
     color: colors.forest,
-    marginVertical: 4,
-  },
-  slotRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  slotChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.border,
-  },
-  slotChipActive: {
-    backgroundColor: colors.forest,
-  },
-  slotLabel: {
-    fontFamily: 'Outfit_500Medium',
-    fontSize: 13,
-    color: colors.textMuted,
-  },
-  slotLabelActive: {
-    color: colors.white,
+    marginVertical: spacing.xs,
   },
   disclaimer: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     backgroundColor: colors.cream,
   },
   error: {
     color: colors.orange,
-    marginTop: 8,
+    marginTop: spacing.sm,
     textAlign: 'center',
   },
 });

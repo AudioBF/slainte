@@ -2,19 +2,24 @@ import { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { spacing } from '../theme/tokens';
 
 type Props = {
   children: ReactNode;
   scroll?: boolean;
   style?: ViewStyle;
   padded?: boolean;
+  /** Extra bottom padding when a PrimaryActionBar is shown */
+  footerSpace?: number;
 };
 
-export function Screen({ children, scroll = true, style, padded = true }: Props) {
+export function Screen({ children, scroll = true, style, padded = true, footerSpace = 0 }: Props) {
   const insets = useSafeAreaInsets();
   const content = (
     <View style={[styles.inner, padded && styles.padded, style]}>{children}</View>
   );
+
+  const scrollPadding = spacing.xxxl + footerSpace;
 
   if (!scroll) {
     return (
@@ -27,7 +32,7 @@ export function Screen({ children, scroll = true, style, padded = true }: Props)
   return (
     <ScrollView
       style={[styles.container, { paddingTop: insets.top }]}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollPadding }]}
       showsVerticalScrollIndicator={false}
     >
       {content}

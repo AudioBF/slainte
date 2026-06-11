@@ -7,6 +7,13 @@ export const SLOT_LABELS: Record<MealSlot, string> = {
   snack: 'Lanche',
 };
 
+export const SLOT_EMOJI: Record<MealSlot, string> = {
+  breakfast: '☀️',
+  lunch: '🍽️',
+  dinner: '🌙',
+  snack: '🍎',
+};
+
 export const SLOT_SHORT: Record<MealSlot, string> = {
   breakfast: 'Café',
   lunch: 'Almoço',

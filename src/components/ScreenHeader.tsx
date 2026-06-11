@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { APP } from '../constants/app';
 import { colors } from '../theme/colors';
+import { elevation, spacing } from '../theme/tokens';
 import { Avatar } from './Avatar';
 import { LogoIcon } from './LogoIcon';
 
@@ -74,13 +75,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.forest,
     borderRadius: 20,
     padding: 16,
-    marginBottom: 20,
-    gap: 12,
-    shadowColor: colors.forest,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
+    marginBottom: spacing.xl,
+    gap: spacing.md,
+    ...elevation.header,
   },
   textBlock: {
     flex: 1,

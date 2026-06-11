@@ -1,15 +1,18 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { CalorieRing } from '../../src/components/CalorieRing';
 import { Card } from '../../src/components/Card';
 import { ComparisonBars } from '../../src/components/ComparisonBars';
+import { ListRow } from '../../src/components/ListRow';
 import { MacroBar } from '../../src/components/MacroBar';
+import { PrimaryActionBar } from '../../src/components/PrimaryActionBar';
 import { Screen } from '../../src/components/Screen';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
+import { Section, SectionAction } from '../../src/components/Section';
 import { SegmentedControl } from '../../src/components/SegmentedControl';
 import { TrendChart } from '../../src/components/TrendChart';
-import { SLOT_LABELS } from '../../src/constants/meals';
+import { SLOT_EMOJI, SLOT_LABELS } from '../../src/constants/meals';
 import {
   formatDateLabel,
   offsetDate,
@@ -24,6 +27,7 @@ import {
 } from '../../src/store/selectors';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
+import { radius, spacing } from '../../src/theme/tokens';
 import { typography } from '../../src/theme/typography';
 
 function DateNavigator({
@@ -66,6 +70,8 @@ export default function TodayScreen() {
   const setSelectedHistoryDate = useAppStore((s) => s.setSelectedHistoryDate);
 
   const isToday = selectedHistoryDate === todayISO();
+  const showFab = isToday && viewMode === 'today';
+
   const dayMeals = useMemo(
     () => selectMealsForDate(loggedMeals, selectedHistoryDate),
     [loggedMeals, selectedHistoryDate],
@@ -96,150 +102,150 @@ export default function TodayScreen() {
     [loggedMeals, weekDays],
   );
 
+  const mealSectionTitle = isToday
+    ? 'Refeições de hoje'
+    : `Refeições de ${formatDateLabel(selectedHistoryDate).toLowerCase()}`;
+
   return (
-    <Screen>
-      <ScreenHeader
-        home
-        title="Hoje"
-        displayName={profile.displayName || undefined}
-        avatarUri={profile.avatarUri}
-        onAvatarPress={() => router.push('/profile')}
-      />
+    <View style={styles.root}>
+      <Screen footerSpace={showFab ? 80 + 64 : 0}>
+        <ScreenHeader
+          home
+          title="Hoje"
+          displayName={profile.displayName || undefined}
+          avatarUri={profile.avatarUri}
+          onAvatarPress={() => router.push('/profile')}
+        />
 
-      <SegmentedControl
-        options={[
-          { value: 'today', label: 'Hoje' },
-          { value: 'week', label: 'Semana' },
-        ]}
-        value={viewMode}
-        onChange={setViewMode}
-      />
+        <SegmentedControl
+          options={[
+            { value: 'today', label: 'Hoje' },
+            { value: 'week', label: 'Semana' },
+          ]}
+          value={viewMode}
+          onChange={setViewMode}
+        />
 
-      {viewMode === 'today' ? (
-        <>
-          <DateNavigator date={selectedHistoryDate} onChange={setSelectedHistoryDate} />
+        {viewMode === 'today' ? (
+          <>
+            <DateNavigator date={selectedHistoryDate} onChange={setSelectedHistoryDate} />
 
-          <Card>
-            <CalorieRing current={dayActual.calories} goal={profile.dailyGoals.calories} />
-            <View style={styles.macros}>
-              <MacroBar
-                label="Proteína"
-                current={dayActual.protein}
-                goal={profile.dailyGoals.protein}
-                color={colors.protein}
-              />
-              <MacroBar
-                label="Carboidrato"
-                current={dayActual.carbs}
-                goal={profile.dailyGoals.carbs}
-                color={colors.carbs}
-              />
-              <MacroBar
-                label="Gordura"
-                current={dayActual.fat}
-                goal={profile.dailyGoals.fat}
-                color={colors.fat}
-              />
-            </View>
-          </Card>
-
-          <View style={styles.sectionHeader}>
-            <Text style={[typography.subtitle, styles.section]}>
-              Refeições {isToday ? 'de hoje' : `de ${formatDateLabel(selectedHistoryDate).toLowerCase()}`}
-            </Text>
-            {isToday ? (
-              <Pressable onPress={() => router.push('/meal')}>
-                <Text style={styles.addLink}>+ Nova</Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          {dayMeals.length === 0 ? (
             <Card>
-              <Text style={typography.body}>Nenhuma refeição registrada neste dia.</Text>
-              {isToday ? (
-                <Pressable onPress={() => router.push('/meal')} style={styles.emptyAction}>
-                  <Text style={styles.addLink}>Fotografar refeição</Text>
-                </Pressable>
-              ) : null}
+              <CalorieRing current={dayActual.calories} goal={profile.dailyGoals.calories} />
+              <View style={styles.macros}>
+                <MacroBar
+                  label="Proteína"
+                  current={dayActual.protein}
+                  goal={profile.dailyGoals.protein}
+                  color={colors.protein}
+                />
+                <MacroBar
+                  label="Carboidrato"
+                  current={dayActual.carbs}
+                  goal={profile.dailyGoals.carbs}
+                  color={colors.carbs}
+                />
+                <MacroBar
+                  label="Gordura"
+                  current={dayActual.fat}
+                  goal={profile.dailyGoals.fat}
+                  color={colors.fat}
+                />
+              </View>
             </Card>
-          ) : (
-            dayMeals.map((meal) => {
-              const total = sumComponentMacros(meal.components);
-              return (
-                <Pressable key={meal.id} onPress={() => router.push(`/meal-detail/${meal.id}`)}>
-                  <Card>
-                    <View style={styles.mealRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.mealSlot}>{SLOT_LABELS[meal.slot]}</Text>
-                        <Text style={typography.subtitle}>{meal.name}</Text>
-                        <Text style={typography.caption}>
-                          {meal.fromPlan ? 'Do plano' : 'Por foto'} · {total.calories} kcal · P{' '}
-                          {total.protein}g
-                        </Text>
-                      </View>
-                      <Text style={styles.editHint}>Editar</Text>
-                    </View>
-                  </Card>
-                </Pressable>
-              );
-            })
-          )}
-        </>
-      ) : (
-        <>
-          <Card>
-            <TrendChart data={weekTrend} goal={profile.dailyGoals.calories} />
-          </Card>
-          <Card>
-            <ComparisonBars planned={weekComparison.planned} actual={weekComparison.actual} />
-          </Card>
 
-          <Text style={[typography.subtitle, styles.section]}>Histórico da semana</Text>
-          {weekSummaries
-            .slice()
-            .reverse()
-            .map(({ date, actual, meals }) => (
-              <Pressable
-                key={date}
-                onPress={() => {
-                  setSelectedHistoryDate(date);
-                  setViewMode('today');
-                }}
-              >
-                <Card style={date === todayISO() ? styles.todayCard : undefined}>
-                  <View style={styles.weekRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={typography.subtitle}>{formatDateLabel(date)}</Text>
-                      <Text style={typography.caption}>
-                        {meals.length} refeiç{meals.length === 1 ? 'ão' : 'ões'} · {actual.calories}{' '}
-                        kcal
-                      </Text>
+            <Section
+              title={mealSectionTitle}
+              action={
+                isToday ? (
+                  <SectionAction label="+ Nova" onPress={() => router.push('/meal')} />
+                ) : undefined
+              }
+            />
+
+            {dayMeals.length === 0 ? (
+              <Card>
+                <Text style={typography.body}>Nenhuma refeição registrada neste dia.</Text>
+              </Card>
+            ) : (
+              <Card flat>
+                {dayMeals.map((meal, index) => {
+                  const total = sumComponentMacros(meal.components);
+                  const isLast = index === dayMeals.length - 1;
+                  return (
+                    <View key={meal.id} style={!isLast ? styles.listDivider : undefined}>
+                      <ListRow
+                        icon={SLOT_EMOJI[meal.slot]}
+                        eyebrow={SLOT_LABELS[meal.slot]}
+                        title={meal.name}
+                        subtitle={`${meal.fromPlan ? 'Do plano' : 'Por foto'} · ${total.calories} kcal · P ${total.protein}g`}
+                        onPress={() => router.push(`/meal-detail/${meal.id}`)}
+                      />
                     </View>
-                    <Text style={styles.weekCalories}>{actual.calories}</Text>
+                  );
+                })}
+              </Card>
+            )}
+          </>
+        ) : (
+          <>
+            <Card>
+              <TrendChart data={weekTrend} goal={profile.dailyGoals.calories} />
+            </Card>
+            <Card>
+              <ComparisonBars planned={weekComparison.planned} actual={weekComparison.actual} />
+            </Card>
+
+            <Section title="Histórico da semana" subtitle="Toque em um dia para ver detalhes" />
+
+            <Card flat>
+              {weekSummaries
+                .slice()
+                .reverse()
+                .map(({ date, actual, meals }, index, arr) => (
+                  <View
+                    key={date}
+                    style={index < arr.length - 1 ? styles.listDivider : undefined}
+                  >
+                    <ListRow
+                      title={formatDateLabel(date)}
+                      subtitle={`${meals.length} refeiç${meals.length === 1 ? 'ão' : 'ões'} · ${actual.calories} kcal`}
+                      trailing={String(actual.calories)}
+                      showChevron
+                      highlighted={date === todayISO()}
+                      onPress={() => {
+                        setSelectedHistoryDate(date);
+                        setViewMode('today');
+                      }}
+                    />
                   </View>
-                </Card>
-              </Pressable>
-            ))}
+                ))}
+            </Card>
+          </>
+        )}
+      </Screen>
 
-          <Card>
-            <Text style={typography.caption}>
-              Toque em um dia para ver detalhes. Comparativo: o que você planejou versus o que registrou.
-            </Text>
-          </Card>
-        </>
-      )}
-    </Screen>
+      {showFab ? (
+        <PrimaryActionBar
+          label="Fotografar refeição"
+          onPress={() => router.push('/meal')}
+          aboveTabBar
+        />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   dateNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.xs,
   },
   dateArrow: {
     width: 36,
@@ -270,55 +276,12 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   macros: {
-    marginTop: 20,
+    marginTop: spacing.xl,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  section: {
-    marginBottom: 0,
-  },
-  addLink: {
-    fontFamily: 'Outfit_600SemiBold',
-    fontSize: 14,
-    color: colors.orange,
-  },
-  emptyAction: {
-    marginTop: 12,
-  },
-  mealRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  mealSlot: {
-    fontFamily: 'Outfit_500Medium',
-    fontSize: 12,
-    color: colors.orange,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  editHint: {
-    fontFamily: 'Outfit_500Medium',
-    fontSize: 13,
-    color: colors.sage,
-  },
-  weekRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  weekCalories: {
-    fontFamily: 'Fraunces_700Bold',
-    fontSize: 22,
-    color: colors.forest,
-  },
-  todayCard: {
-    borderWidth: 1.5,
-    borderColor: colors.forest,
+  listDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
   },
 });

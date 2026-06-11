@@ -1,26 +1,28 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/colors';
+import { elevation, radius, spacing } from '../theme/tokens';
 
 type Props = {
   children: ReactNode;
   style?: ViewStyle;
+  /** No outer margin — for nested use inside Section */
+  flat?: boolean;
 };
 
-export function Card({ children, style }: Props) {
-  return <View style={[styles.card, style]}>{children}</View>;
+export function Card({ children, style, flat }: Props) {
+  return <View style={[styles.card, flat && styles.flat, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: colors.forest,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...elevation.card,
+  },
+  flat: {
+    marginBottom: 0,
   },
 });
