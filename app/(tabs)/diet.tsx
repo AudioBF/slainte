@@ -1,16 +1,17 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
-import { ChipGroup } from '../../src/components/ChipGroup';
 import { EmptyState } from '../../src/components/EmptyState';
 import { InputField } from '../../src/components/InputField';
+import { ListRow } from '../../src/components/ListRow';
 import { LoadingState } from '../../src/components/LoadingState';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Section } from '../../src/components/Section';
 import { StatPill } from '../../src/components/StatPill';
+import { ChipGroup } from '../../src/components/ChipGroup';
 import { MEAL_PLAN_MESSAGES } from '../../src/constants/ai-messages';
 import { useMealPlanGenerator } from '../../src/features/diet';
 import type { ProfileGoal } from '../../src/features/profile';
@@ -54,12 +55,8 @@ export default function DietScreen() {
   const mealPlanSummary = useAppStore((s) => s.mealPlanSummary);
 
   const [restrictions, setRestrictions] = useState(profile.restrictions);
-  const [showRecipes, setShowRecipes] = useState(false);
 
-  const dayMeals = useMemo(
-    () => plannedMeals.filter((m) => m.dayIndex === selectedDietDay),
-    [plannedMeals, selectedDietDay],
-  );
+  const dayMeals = plannedMeals.filter((m) => m.dayIndex === selectedDietDay);
 
   async function handleGenerate() {
     await generate(restrictions);
@@ -164,33 +161,28 @@ export default function DietScreen() {
         })
       )}
 
-      <Pressable onPress={() => setShowRecipes(!showRecipes)} style={styles.recipeToggle}>
-        <Text style={typography.subtitle}>
-          Receitas de referência {showRecipes ? '▾' : '▸'}
-        </Text>
-      </Pressable>
-
-      {showRecipes &&
-        recipes.map((recipe) => (
-          <Card key={recipe.id}>
-            <Text style={typography.subtitle}>{recipe.name}</Text>
-            <Text style={typography.caption}>
-              {recipe.servings} porções · {recipe.caloriesPerServing} kcal/porção
-            </Text>
-            <Text style={[typography.label, styles.recipeSection]}>Ingredientes</Text>
-            {recipe.ingredients.map((ing) => (
-              <Text key={ing.name} style={typography.body}>
-                · {ing.name} — {ing.amount}
-              </Text>
-            ))}
-            <Text style={[typography.label, styles.recipeSection]}>Modo de preparo</Text>
-            {recipe.steps.map((step, i) => (
-              <Text key={i} style={typography.body}>
-                {i + 1}. {step}
-              </Text>
+      {recipes.length > 0 ? (
+        <>
+          <Section
+            title="Receitas de referência"
+            subtitle="Toque para ver ingredientes e preparo"
+          />
+          <Card flat>
+            {recipes.map((recipe, index) => (
+              <View
+                key={recipe.id}
+                style={index < recipes.length - 1 ? styles.listDivider : undefined}
+              >
+                <ListRow
+                  title={recipe.name}
+                  subtitle={`${recipe.servings} porções · ${recipe.caloriesPerServing} kcal/porção`}
+                  onPress={() => router.push(`/recipe/${recipe.id}`)}
+                />
+              </View>
             ))}
           </Card>
-        ))}
+        </>
+      ) : null}
 
       <Card style={styles.disclaimer}>
         <Text style={typography.caption}>
@@ -227,13 +219,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
   },
-  recipeToggle: {
+  listDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
     marginBottom: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  recipeSection: {
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+    paddingBottom: spacing.sm,
   },
   disclaimer: {
     backgroundColor: colors.cream,

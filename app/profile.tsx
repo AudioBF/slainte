@@ -5,20 +5,25 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Avatar } from '../src/components/Avatar';
 import { Button } from '../src/components/Button';
 import { Card } from '../src/components/Card';
-import { ScreenHeader } from '../src/components/ScreenHeader';
+import { ChipGroup } from '../src/components/ChipGroup';
+import { InputField } from '../src/components/InputField';
+import { PrimaryActionBar } from '../src/components/PrimaryActionBar';
 import { Screen } from '../src/components/Screen';
+import { ScreenHeader } from '../src/components/ScreenHeader';
+import { Section } from '../src/components/Section';
 import { signOut, useAuth } from '../src/features/auth';
 import { DEFAULT_DAILY_GOALS, type ProfileGoal } from '../src/features/profile';
 import { hasSupabase } from '../src/lib/env';
 import { useAppStore } from '../src/store/useAppStore';
 import { colors } from '../src/theme/colors';
+import { radius, spacing } from '../src/theme/tokens';
 import { typography } from '../src/theme/typography';
 
-const GOAL_LABELS: Record<ProfileGoal, string> = {
-  lose: 'Emagrecimento',
-  maintain: 'Manutenção',
-  gain: 'Hipertrofia',
-};
+const GOAL_OPTIONS = [
+  { value: 'lose', label: 'Emagrecimento' },
+  { value: 'maintain', label: 'Manutenção' },
+  { value: 'gain', label: 'Hipertrofia' },
+] as const satisfies readonly { value: ProfileGoal; label: string }[];
 
 type MacroField = 'calories' | 'protein' | 'carbs' | 'fat';
 
@@ -82,223 +87,183 @@ export default function ProfileScreen() {
   }
 
   return (
-    <Screen>
-      <ScreenHeader title="Perfil" subtitle="Seus dados e metas" />
+    <View style={styles.root}>
+      <Screen footerSpace={88}>
+        <ScreenHeader title="Perfil" subtitle="Seus dados e metas" />
 
-      <Card>
-        <View style={styles.avatarRow}>
-          <Pressable onPress={pickAvatar}>
-            <Avatar uri={profile.avatarUri} name={profile.displayName} size={72} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={typography.subtitle}>
-              {profile.displayName || 'Sem nome'}
-            </Text>
-            <Pressable onPress={pickAvatar}>
-              <Text style={styles.changePhoto}>Alterar foto</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <Text style={[typography.label, styles.fieldLabel]}>Nome</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={(t) => {
-            setName(t);
-            setSaved(false);
-          }}
-          placeholder="Seu nome"
-          placeholderTextColor={colors.textMuted}
-        />
-      </Card>
-
-      <Card>
-        <Text style={typography.label}>Objetivo</Text>
-        <View style={styles.goalRow}>
-          {(Object.keys(GOAL_LABELS) as ProfileGoal[]).map((g) => (
-            <Pressable
-              key={g}
-              onPress={() => {
-                setGoal(g);
+        <Section title="Identidade">
+          <Card flat>
+            <View style={styles.avatarRow}>
+              <Pressable onPress={pickAvatar} accessibilityRole="button">
+                <Avatar uri={profile.avatarUri} name={profile.displayName} size={72} />
+              </Pressable>
+              <View style={styles.avatarMeta}>
+                <Text style={typography.subtitle}>{profile.displayName || 'Sem nome'}</Text>
+                <Pressable onPress={pickAvatar}>
+                  <Text style={styles.changePhoto}>Alterar foto</Text>
+                </Pressable>
+              </View>
+            </View>
+            <InputField
+              label="Nome"
+              value={name}
+              onChangeText={(t) => {
+                setName(t);
                 setSaved(false);
               }}
-              style={[styles.goalChip, goal === g && styles.goalChipActive]}
-            >
-              <Text style={[styles.goalText, goal === g && styles.goalTextActive]}>
-                {GOAL_LABELS[g]}
+              placeholder="Seu nome"
+            />
+          </Card>
+        </Section>
+
+        <Section title="Objetivo e metas">
+          <Card flat>
+            <Text style={typography.label}>Objetivo</Text>
+            <ChipGroup
+              options={GOAL_OPTIONS}
+              value={goal}
+              onChange={(g) => {
+                setGoal(g as ProfileGoal);
+                setSaved(false);
+              }}
+            />
+
+            <Text style={[typography.label, styles.macroSection]}>Metas diárias</Text>
+            {MACRO_FIELDS.map((field) => (
+              <View key={field.key} style={styles.macroRow}>
+                <Text style={styles.macroLabel}>{field.label}</Text>
+                <View style={styles.macroInputWrap}>
+                  <TextInput
+                    style={styles.macroInput}
+                    keyboardType="numeric"
+                    value={String(dailyGoals[field.key])}
+                    onChangeText={(t) => setMacro(field.key, t)}
+                  />
+                  <Text style={styles.macroUnit}>{field.unit}</Text>
+                </View>
+              </View>
+            ))}
+            <Button
+              label="Aplicar metas padrão do objetivo"
+              onPress={applyGoalDefaults}
+              variant="outline"
+              style={{ marginTop: spacing.sm }}
+            />
+          </Card>
+        </Section>
+
+        <Section title="Preferências alimentares">
+          <Card flat>
+            <InputField
+              label="Restrições"
+              multiline
+              numberOfLines={3}
+              value={restrictions}
+              onChangeText={(t) => {
+                setRestrictions(t);
+                setSaved(false);
+              }}
+              placeholder="Diabetes, sem glúten, intolerâncias..."
+            />
+          </Card>
+        </Section>
+
+        <Section title="Conta e nuvem">
+          <Card flat>
+            {!configured ? (
+              <Text style={typography.caption}>
+                Supabase não configurado — dados ficam só neste dispositivo.
               </Text>
-            </Pressable>
-          ))}
-        </View>
+            ) : isSignedIn ? (
+              <>
+                <Text style={typography.subtitle}>{user?.email}</Text>
+                <Text style={[typography.caption, styles.cloudHint]}>
+                  {lastSyncedAt
+                    ? `Sync: ${new Date(lastSyncedAt).toLocaleString('pt-BR')}`
+                    : 'Aguardando primeira sincronização...'}
+                </Text>
+                <Button
+                  label="Gerenciar conta"
+                  onPress={() => router.push('/account')}
+                  variant="outline"
+                  style={{ marginTop: spacing.sm }}
+                />
+                <Button
+                  label="Sair"
+                  onPress={() => signOut()}
+                  variant="outline"
+                  style={{ marginTop: spacing.sm }}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={typography.caption}>
+                  Entre para sincronizar cardápio, refeições e lista entre dispositivos.
+                </Text>
+                <Button
+                  label="Entrar / Criar conta"
+                  onPress={() => router.push('/account')}
+                  style={{ marginTop: spacing.sm }}
+                />
+              </>
+            )}
+          </Card>
+        </Section>
 
-        <Text style={[typography.label, styles.fieldLabel]}>Metas diárias</Text>
-        {MACRO_FIELDS.map((field) => (
-          <View key={field.key} style={styles.macroRow}>
-            <Text style={styles.macroLabel}>{field.label}</Text>
-            <View style={styles.macroInputWrap}>
-              <TextInput
-                style={styles.macroInput}
-                keyboardType="numeric"
-                value={String(dailyGoals[field.key])}
-                onChangeText={(t) => setMacro(field.key, t)}
-              />
-              <Text style={styles.macroUnit}>{field.unit}</Text>
-            </View>
-          </View>
-        ))}
-        <Button
-          label="Aplicar metas padrão do objetivo"
-          onPress={applyGoalDefaults}
-          variant="outline"
-          style={{ marginTop: 8 }}
-        />
-      </Card>
-
-      <Card>
-        <Text style={typography.label}>Restrições e preferências</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          multiline
-          numberOfLines={3}
-          value={restrictions}
-          onChangeText={(t) => {
-            setRestrictions(t);
-            setSaved(false);
-          }}
-          placeholder="Ex: diabetes, sem glúten, intolerâncias..."
-          placeholderTextColor={colors.textMuted}
-        />
-      </Card>
-
-      <Card>
-        <Text style={typography.label}>Conta e nuvem</Text>
-        {!configured ? (
-          <Text style={[typography.caption, styles.cloudHint]}>
-            Supabase não configurado — dados ficam só neste dispositivo.
-          </Text>
-        ) : isSignedIn ? (
-          <>
-            <Text style={typography.subtitle}>{user?.email}</Text>
-            <Text style={[typography.caption, styles.cloudHint]}>
-              {lastSyncedAt
-                ? `Sync: ${new Date(lastSyncedAt).toLocaleString('pt-BR')}`
-                : 'Aguardando primeira sincronização...'}
-            </Text>
+        <Section title="Mais opções">
+          <Card flat style={styles.moreCard}>
+            <Button label="Rever introdução" onPress={handleRedoOnboarding} variant="outline" />
             <Button
-              label="Gerenciar conta"
-              onPress={() => router.push('/account')}
+              label="Privacidade e dados"
+              onPress={() => router.push('/privacy')}
               variant="outline"
-              style={{ marginTop: 10 }}
+              style={{ marginTop: spacing.sm }}
             />
             <Button
-              label="Sair"
-              onPress={() => signOut()}
+              label="Voltar"
+              onPress={() => router.back()}
               variant="outline"
-              style={{ marginTop: 8 }}
+              style={{ marginTop: spacing.sm }}
             />
-          </>
-        ) : (
-          <>
-            <Text style={[typography.caption, styles.cloudHint]}>
-              Entre para sincronizar cardápio, refeições e lista entre dispositivos.
-            </Text>
-            <Button
-              label="Entrar / Criar conta"
-              onPress={() => router.push('/account')}
-              style={{ marginTop: 10 }}
-            />
-          </>
-        )}
-      </Card>
+          </Card>
+        </Section>
+      </Screen>
 
-      <Button label={saved ? 'Salvo ✓' : 'Salvar alterações'} onPress={handleSave} />
-
-      <Button
-        label="Rever introdução"
-        onPress={handleRedoOnboarding}
-        variant="outline"
-        style={{ marginTop: 10 }}
+      <PrimaryActionBar
+        label={saved ? 'Salvo ✓' : 'Salvar alterações'}
+        onPress={handleSave}
       />
-
-      <Button
-        label="Privacidade e dados"
-        onPress={() => router.push('/privacy')}
-        variant="outline"
-        style={{ marginTop: 10 }}
-      />
-
-      <Button
-        label="Voltar"
-        onPress={() => router.back()}
-        variant="outline"
-        style={{ marginTop: 10 }}
-      />
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   avatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 8,
+    gap: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  avatarMeta: {
+    flex: 1,
   },
   changePhoto: {
     fontFamily: 'Outfit_500Medium',
     fontSize: 13,
     color: colors.orange,
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
-  fieldLabel: {
-    marginTop: 12,
-  },
-  input: {
-    fontFamily: 'Outfit_400Regular',
-    fontSize: 15,
-    color: colors.text,
-    backgroundColor: colors.cream,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginTop: 8,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  goalRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  goalChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.cream,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  goalChipActive: {
-    backgroundColor: colors.forest,
-    borderColor: colors.forest,
-  },
-  goalText: {
-    fontFamily: 'Outfit_500Medium',
-    fontSize: 13,
-    color: colors.text,
-  },
-  goalTextActive: {
-    color: colors.white,
+  macroSection: {
+    marginTop: spacing.lg,
   },
   macroRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: spacing.sm,
   },
   macroLabel: {
     fontFamily: 'Outfit_500Medium',
@@ -308,18 +273,20 @@ const styles = StyleSheet.create({
   macroInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.xs,
   },
   macroInput: {
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 16,
     color: colors.forest,
     backgroundColor: colors.cream,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
     minWidth: 80,
     textAlign: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   macroUnit: {
     fontFamily: 'Outfit_400Regular',
@@ -328,6 +295,9 @@ const styles = StyleSheet.create({
     width: 32,
   },
   cloudHint: {
-    marginTop: 8,
+    marginTop: spacing.sm,
+  },
+  moreCard: {
+    gap: 0,
   },
 });

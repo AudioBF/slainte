@@ -1,16 +1,21 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
-import { ScreenHeader } from '../../src/components/ScreenHeader';
+import { InputField } from '../../src/components/InputField';
 import { LoadingState } from '../../src/components/LoadingState';
+import { ProgressBar } from '../../src/components/ProgressBar';
 import { Screen } from '../../src/components/Screen';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
+import { Section, SectionAction } from '../../src/components/Section';
+import { ShoppingListItem } from '../../src/components/ShoppingListItem';
 import { SHOPPING_LIST_MESSAGES } from '../../src/constants/ai-messages';
 import { useShoppingListGenerator } from '../../src/features/shopping';
 import { hapticLight } from '../../src/lib/haptics';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
+import { spacing } from '../../src/theme/tokens';
 import { typography } from '../../src/theme/typography';
 
 export default function ShoppingScreen() {
@@ -22,6 +27,7 @@ export default function ShoppingScreen() {
   const clearCheckedShopping = useAppStore((s) => s.clearCheckedShopping);
   const { generate, loading: generating, error } = useShoppingListGenerator();
 
+  const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState('');
 
@@ -42,6 +48,7 @@ export default function ShoppingScreen() {
     addShoppingItem(newName.trim(), newQty.trim() || '1 un');
     setNewName('');
     setNewQty('');
+    setShowAdd(false);
   }
 
   return (
@@ -49,34 +56,65 @@ export default function ShoppingScreen() {
       <ScreenHeader title="Compras" subtitle="Lista gerada do seu cardápio" />
 
       <Card>
-        <View style={styles.summaryRow}>
-          <Text style={typography.subtitle}>
-            {checked}/{shopping.length} no carrinho
-          </Text>
+        <ProgressBar
+          current={checked}
+          total={shopping.length}
+          label="Progresso do carrinho"
+        />
+        <View style={styles.actions}>
           <Button
-            label={generating ? '...' : 'Do cardápio'}
+            label={generating ? 'Gerando...' : 'Do cardápio'}
             onPress={handleGenerate}
             variant="outline"
             style={styles.genBtn}
             disabled={generating || !hasPlan}
           />
+          {checked > 0 ? (
+            <Button
+              label="Limpar marcados"
+              onPress={clearCheckedShopping}
+              variant="outline"
+              style={styles.genBtn}
+            />
+          ) : null}
         </View>
         {!hasPlan ? (
-          <Text style={styles.hint}>Gere um cardápio na aba Dieta para usar esta opção.</Text>
+          <Text style={styles.hint}>Gere um cardápio na aba Dieta para usar &quot;Do cardápio&quot;.</Text>
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {generating ? (
           <LoadingState messages={SHOPPING_LIST_MESSAGES} active={generating} />
         ) : null}
-        {checked > 0 ? (
-          <Button
-            label="Limpar itens marcados"
-            onPress={clearCheckedShopping}
-            variant="outline"
-            style={{ marginTop: 10 }}
-          />
-        ) : null}
       </Card>
+
+      <Section
+        title="Lista da semana"
+        subtitle={shopping.length ? `${shopping.length - checked} itens restantes` : undefined}
+        action={
+          <SectionAction
+            label={showAdd ? 'Cancelar' : '+ Item'}
+            onPress={() => setShowAdd((v) => !v)}
+          />
+        }
+      />
+
+      {showAdd ? (
+        <Card style={styles.addCard}>
+          <InputField
+            label="Alimento"
+            placeholder="Ex: peito de frango"
+            value={newName}
+            onChangeText={setNewName}
+          />
+          <InputField
+            label="Quantidade"
+            placeholder="Ex: 500 g"
+            value={newQty}
+            onChangeText={setNewQty}
+          />
+          <Button label="Adicionar à lista" onPress={handleAdd} style={{ marginTop: spacing.md }} />
+        </Card>
+      ) : null}
 
       {shopping.length === 0 ? (
         <Card>
@@ -84,152 +122,65 @@ export default function ShoppingScreen() {
             title="Lista vazia"
             message={
               hasPlan
-                ? 'Toque em "Do cardápio" para gerar a lista da semana, ou adicione itens manualmente.'
-                : 'Gere um cardápio na Dieta ou adicione itens manualmente abaixo.'
+                ? 'Toque em "Do cardápio" para gerar a lista da semana.'
+                : 'Gere um cardápio na Dieta ou adicione itens manualmente.'
             }
           />
         </Card>
       ) : (
-        shopping.map((item) => (
-          <Card key={item.id} style={item.checked ? styles.checkedCard : undefined}>
-            <View style={styles.itemRow}>
-              <Pressable
-                onPress={() => handleToggle(item.id)}
-                style={styles.checkArea}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: item.checked }}
-                accessibilityLabel={`${item.name}, ${item.quantity}`}
-              >
-                <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
-                  {item.checked && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-              </Pressable>
-              <Pressable onPress={() => handleToggle(item.id)} style={{ flex: 1 }}>
-                <Text style={[typography.subtitle, item.checked && styles.checkedText]}>
-                  {item.name}
-                </Text>
-                <Text style={typography.caption}>{item.quantity}</Text>
-              </Pressable>
-              {item.fromPlan ? <Text style={styles.badge}>plano</Text> : null}
-              <Pressable onPress={() => removeShoppingItem(item.id)} hitSlop={8} style={styles.removeBtn}>
-                <Text style={styles.removeLabel}>×</Text>
-              </Pressable>
+        <Card flat>
+          {shopping.map((item, index) => (
+            <View
+              key={item.id}
+              style={index < shopping.length - 1 ? styles.listDivider : undefined}
+            >
+              <ShoppingListItem
+                name={item.name}
+                quantity={item.quantity}
+                checked={item.checked}
+                fromPlan={item.fromPlan}
+                onToggle={() => handleToggle(item.id)}
+                onRemove={() => removeShoppingItem(item.id)}
+              />
             </View>
-          </Card>
-        ))
+          ))}
+        </Card>
       )}
-
-      <Card>
-        <Text style={typography.subtitle}>Adicionar item</Text>
-        <View style={styles.addRow}>
-          <TextInput
-            style={[styles.input, { flex: 2 }]}
-            placeholder="Alimento"
-            placeholderTextColor={colors.textMuted}
-            value={newName}
-            onChangeText={setNewName}
-          />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Qtd"
-            placeholderTextColor={colors.textMuted}
-            value={newQty}
-            onChangeText={setNewQty}
-          />
-        </View>
-        <Button label="Adicionar" onPress={handleAdd} variant="outline" style={{ marginTop: 10 }} />
-      </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  summaryRow: {
+  actions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
   },
   genBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   hint: {
     fontFamily: 'Outfit_400Regular',
     fontSize: 13,
     color: colors.textMuted,
-    marginTop: 10,
+    marginTop: spacing.sm,
   },
   error: {
     fontFamily: 'Outfit_400Regular',
     fontSize: 13,
     color: colors.orange,
-    marginTop: 10,
+    marginTop: spacing.sm,
     textAlign: 'center',
   },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  checkArea: {
-    padding: 2,
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: colors.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: colors.forest,
-    borderColor: colors.forest,
-  },
-  checkmark: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  checkedCard: {
-    opacity: 0.6,
-  },
-  checkedText: {
-    textDecorationLine: 'line-through',
-  },
-  badge: {
-    fontFamily: 'Outfit_500Medium',
-    fontSize: 10,
-    color: colors.orange,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  removeBtn: {
-    paddingHorizontal: 4,
-  },
-  removeLabel: {
-    fontFamily: 'Outfit_600SemiBold',
-    fontSize: 20,
-    color: colors.textMuted,
-    lineHeight: 22,
-  },
-  addRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  input: {
-    fontFamily: 'Outfit_400Regular',
-    fontSize: 15,
+  addCard: {
     backgroundColor: colors.cream,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.text,
+  },
+  listDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
   },
 });
