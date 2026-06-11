@@ -30,39 +30,44 @@ export function PrimaryActionBar({
   return (
     <View
       style={[
-        styles.bar,
+        styles.outer,
         { bottom: tabBarOffset, paddingBottom: Math.max(insets.bottom, spacing.md) },
         style,
       ]}
+      pointerEvents="box-none"
     >
-      {secondaryLabel && onSecondaryPress ? (
-        <Button
-          label={secondaryLabel}
-          onPress={onSecondaryPress}
-          variant="outline"
-          style={styles.secondaryBtn}
-        />
-      ) : null}
-      <Button label={label} onPress={onPress} disabled={disabled} style={styles.primaryBtn} />
+      <View style={styles.bar}>
+        {secondaryLabel && onSecondaryPress ? (
+          <Button
+            label={secondaryLabel}
+            onPress={onSecondaryPress}
+            variant="outline"
+            style={styles.secondaryBtn}
+          />
+        ) : null}
+        <Button label={label} onPress={onPress} disabled={disabled} style={styles.primaryBtn} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: {
+  outer: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  bar: {
+    width: '100%',
+    maxWidth: 520,
     backgroundColor: colors.white,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     gap: spacing.sm,
-    maxWidth: 520,
-    alignSelf: 'center',
-    width: '100%',
     ...elevation.bar,
   },
   primaryBtn: {

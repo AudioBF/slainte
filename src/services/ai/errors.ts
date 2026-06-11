@@ -65,7 +65,7 @@ export function toAiUserMessage(error: unknown): string {
     return 'Chave da API inválida ou sem permissão. Verifique o .env.';
   }
 
-  return 'Não foi possível completar a análise. Tente novamente.';
+  return 'Não foi possível completar a operação. Tente novamente.';
 }
 
 export function sleep(ms: number): Promise<void> {

@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -40,6 +40,7 @@ const SLOT_OPTIONS = MEAL_SLOTS.map((s) => ({
 }));
 
 export default function MealScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ slot?: string; name?: string; plannedId?: string }>();
   const photoDraft = useAppStore((s) => s.photoDraft);
   const updatePhotoComponent = useAppStore((s) => s.updatePhotoComponent);
@@ -145,6 +146,7 @@ export default function MealScreen() {
     confirmPhotoMeal(slot, plannedName ?? defaultName, { plannedMealId: plannedId });
     setImageUri(null);
     setImageBase64(null);
+    router.push('/(tabs)/');
   }
 
   return (
@@ -297,6 +299,7 @@ export default function MealScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    width: '100%',
   },
   planHint: {
     backgroundColor: colors.cream,

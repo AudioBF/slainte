@@ -240,6 +240,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    width: '100%',
   },
   avatarRow: {
     flexDirection: 'row',

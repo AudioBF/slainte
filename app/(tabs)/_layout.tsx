@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
   DietIcon,
   MarketsIcon,
@@ -14,7 +14,13 @@ export default function TabLayout() {
   const hydrated = useStoreHydrated();
   const onboardingComplete = useAppStore((s) => s.profile.onboardingComplete);
 
-  if (!hydrated) return null;
+  if (!hydrated) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator color={colors.forest} size="large" />
+      </View>
+    );
+  }
   if (!onboardingComplete) return <Redirect href="/onboarding" />;
 
   return (
@@ -68,6 +74,12 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cream,
+  },
   tabBar: {
     backgroundColor: colors.white,
     borderTopColor: colors.border,

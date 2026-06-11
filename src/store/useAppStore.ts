@@ -160,7 +160,13 @@ export const useAppStore = create<AppState>()(
         })),
 
       setMealPlan: (plannedMeals, recipes, summary) =>
-        set({ plannedMeals, recipes, selectedDietDay: 0, mealPlanSummary: summary ?? null }),
+        set((s) => ({
+          plannedMeals,
+          recipes,
+          selectedDietDay: 0,
+          mealPlanSummary: summary ?? null,
+          profile: { ...s.profile, updatedAt: new Date().toISOString() },
+        })),
 
       setShopping: (items) => set({ shopping: items }),
 
@@ -198,6 +204,7 @@ export const useAppStore = create<AppState>()(
       confirmPhotoMeal: (slot, name, options) => {
         const { photoDraft } = get();
         if (!photoDraft?.length) return;
+        const now = new Date().toISOString();
         const meal: LoggedMeal = {
           id: createId('meal'),
           date: todayISO(),
@@ -207,7 +214,11 @@ export const useAppStore = create<AppState>()(
           fromPlan: Boolean(options?.plannedMealId),
           plannedMealId: options?.plannedMealId,
         };
-        set((s) => ({ loggedMeals: [...s.loggedMeals, meal], photoDraft: null }));
+        set((s) => ({
+          loggedMeals: [...s.loggedMeals, meal],
+          photoDraft: null,
+          profile: { ...s.profile, updatedAt: now },
+        }));
       },
 
       logPlannedMeal: (meal) => {
@@ -235,7 +246,10 @@ export const useAppStore = create<AppState>()(
             },
           ],
         };
-        set((s) => ({ loggedMeals: [...s.loggedMeals, logged] }));
+        set((s) => ({
+          loggedMeals: [...s.loggedMeals, logged],
+          profile: { ...s.profile, updatedAt: new Date().toISOString() },
+        }));
         return true;
       },
 
@@ -298,7 +312,9 @@ export const useAppStore = create<AppState>()(
           ...createDefaultAccount(),
           ...state.profile,
           dailyGoals: state.profile?.dailyGoals ?? DEFAULT_DAILY_GOALS.maintain,
-          onboardingComplete: state.profile?.onboardingComplete ?? false,
+          onboardingComplete:
+            state.profile?.onboardingComplete ??
+            Boolean(state.profile?.displayName?.trim()),
         };
         return {
           ...state,

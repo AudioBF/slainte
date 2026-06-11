@@ -140,9 +140,11 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    width: '100%',
   },
   hero: {
     alignItems: 'center',
+    width: '100%',
     marginTop: spacing.xxl,
     marginBottom: spacing.lg,
   },

@@ -24,9 +24,22 @@ export default function Root({ children }: PropsWithChildren) {
         <style
           dangerouslySetInnerHTML={{
             __html: `
-              html, body, #root { height: 100%; }
-              body { overflow: hidden; background-color: #F5F0E8; }
-              #root { display: flex; flex: 1; }
+              html, body, #root {
+                height: 100%;
+                width: 100%;
+                overflow-x: hidden;
+              }
+              body {
+                overflow: hidden;
+                background-color: #F5F0E8;
+                margin: 0;
+              }
+              #root {
+                display: flex;
+                flex: 1;
+                width: 100%;
+                min-width: 0;
+              }
             `,
           }}
         />

@@ -33,15 +33,18 @@ export function ScreenHeader({
   onAvatarPress,
   right,
 }: Props) {
-  const showGreeting = home && displayName;
+  const name = displayName?.trim();
+  const greeting = name ? `${getGreeting()}, ${name}` : getGreeting();
 
   return (
     <View style={styles.banner} accessibilityRole="header">
-      <LogoIcon size={40} variant="dark" />
+      <View style={styles.logoWrap}>
+        <LogoIcon size={40} variant="dark" />
+      </View>
       <View style={styles.textBlock}>
-        {showGreeting ? (
-          <Text style={styles.greeting}>
-            {getGreeting()}, {displayName}
+        {home ? (
+          <Text style={styles.greeting} numberOfLines={1}>
+            {greeting}
           </Text>
         ) : null}
         <Text style={styles.title} numberOfLines={1}>
@@ -53,15 +56,16 @@ export function ScreenHeader({
           </Text>
         ) : null}
       </View>
-      {right}
+      {right ? <View style={styles.right}>{right}</View> : null}
       {onAvatarPress ? (
         <Pressable
           onPress={onAvatarPress}
           accessibilityRole="button"
           accessibilityLabel="Abrir perfil"
           hitSlop={8}
+          style={styles.avatarBtn}
         >
-          <Avatar uri={avatarUri ?? null} name={displayName} size={44} />
+          <Avatar uri={avatarUri ?? null} name={name} size={44} />
         </Pressable>
       ) : null}
     </View>
@@ -72,16 +76,27 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
     backgroundColor: colors.forest,
     borderRadius: 20,
     padding: 16,
     marginBottom: spacing.xl,
     gap: spacing.md,
+    overflow: 'hidden',
     ...elevation.header,
+  },
+  logoWrap: {
+    flexShrink: 0,
   },
   textBlock: {
     flex: 1,
     minWidth: 0,
+  },
+  right: {
+    flexShrink: 0,
+  },
+  avatarBtn: {
+    flexShrink: 0,
   },
   greeting: {
     fontFamily: 'Outfit_400Regular',
