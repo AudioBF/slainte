@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   text: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'Outfit_600SemiBold',
     color: colors.white,
     letterSpacing: -0.5,
   },

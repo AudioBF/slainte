@@ -16,6 +16,10 @@ function maxRetriesForTask(task: AiTask): number {
   return task === 'mealPlan' ? AI_LIMITS.mealPlanMaxRetries : AI_LIMITS.maxRetries;
 }
 
+function timeoutForTask(task: AiTask): number {
+  return task === 'mealPlan' ? AI_LIMITS.mealPlanTimeoutMs : AI_LIMITS.requestTimeoutMs;
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
@@ -85,7 +89,7 @@ async function requestOnce<T>(
 
   const result = await withTimeout(
     model.generateContent({ contents: [{ role: 'user', parts }] }),
-    AI_LIMITS.requestTimeoutMs,
+    timeoutForTask(options.task),
   );
   const text = result.response.text();
 

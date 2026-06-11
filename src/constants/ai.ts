@@ -28,4 +28,5 @@ export const AI_LIMITS = {
   maxRetries: 2,
   mealPlanMaxRetries: 1,
   requestTimeoutMs: 50_000,
+  mealPlanTimeoutMs: 120_000,
 } as const;

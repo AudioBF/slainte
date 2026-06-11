@@ -1,3 +1,4 @@
+import { ZodError } from 'zod';
 import { AI_MODEL_FALLBACKS } from '../../constants/ai';
 import type { AiTask } from './config';
 import { getModelForTask } from './config';
@@ -63,6 +64,18 @@ export function toAiUserMessage(error: unknown): string {
 
   if (/API key|401|403|PERMISSION_DENIED/i.test(message)) {
     return 'Chave da API inválida ou sem permissão. Verifique o .env.';
+  }
+
+  if (error instanceof ZodError) {
+    return 'A IA retornou um formato inválido. Toque em gerar novamente.';
+  }
+
+  if (/Invalid meal plan|JSON\.parse|Unexpected token/i.test(message)) {
+    return 'Resposta da IA incompleta. Tente gerar o cardápio novamente.';
+  }
+
+  if (/Failed to fetch|Network request failed|network/i.test(message)) {
+    return 'Sem conexão estável. Verifique a internet e tente novamente.';
   }
 
   return 'Não foi possível completar a operação. Tente novamente.';

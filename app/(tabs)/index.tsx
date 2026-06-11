@@ -72,12 +72,12 @@ export default function TodayScreen() {
   const setSelectedHistoryDate = useAppStore((s) => s.setSelectedHistoryDate);
 
   const isToday = selectedHistoryDate === todayISO();
-  const showFab = isToday && viewMode === 'today';
 
   const dayMeals = useMemo(
     () => selectMealsForDate(loggedMeals, selectedHistoryDate),
     [loggedMeals, selectedHistoryDate],
   );
+  const showFab = isToday && viewMode === 'today' && dayMeals.length === 0;
   const dayActual = useMemo(
     () =>
       isToday

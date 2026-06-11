@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import { Platform, ScrollView, StatusBar, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/tokens';
@@ -13,9 +13,14 @@ type Props = {
   footerSpace?: number;
 };
 
+function topInset(insetsTop: number): number {
+  const androidStatus = Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0;
+  return Math.max(insetsTop, androidStatus, spacing.lg);
+}
+
 export function Screen({ children, scroll = true, style, padded = true, footerSpace = 0 }: Props) {
   const insets = useSafeAreaInsets();
-  const topInset = Math.max(insets.top, spacing.md);
+  const padTop = topInset(insets.top);
   const content = (
     <View style={[styles.inner, padded && styles.padded, style]}>{children}</View>
   );
@@ -24,7 +29,7 @@ export function Screen({ children, scroll = true, style, padded = true, footerSp
 
   if (!scroll) {
     return (
-      <View style={[styles.container, { paddingTop: topInset }]}>
+      <View style={[styles.container, { paddingTop: padTop }]}>
         <View style={styles.centered}>{content}</View>
       </View>
     );
@@ -32,7 +37,7 @@ export function Screen({ children, scroll = true, style, padded = true, footerSp
 
   return (
     <ScrollView
-      style={[styles.container, { paddingTop: topInset }]}
+      style={[styles.container, { paddingTop: padTop }]}
       contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollPadding }]}
       showsVerticalScrollIndicator={false}
     >

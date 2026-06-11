@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 
@@ -12,19 +13,21 @@ type Props = {
 };
 
 export function Avatar({ uri, name, size = 44, onPress, variant = 'default' }: Props) {
+  const [imgFailed, setImgFailed] = useState(false);
   const initial = name?.trim().charAt(0).toUpperCase() || '?';
   const onDark = variant === 'onDark';
+  const hasPhoto = Boolean(uri?.trim()) && !imgFailed;
 
-  const imageStyle = {
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    borderWidth: onDark ? 2 : 0,
-    borderColor: colors.white,
-  };
-
-  const content = uri ? (
-    <Image source={{ uri }} style={imageStyle} />
+  const content = hasPhoto ? (
+    <Image
+      source={{ uri: uri! }}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+      }}
+      onError={() => setImgFailed(true)}
+    />
   ) : (
     <View
       style={[
@@ -41,7 +44,7 @@ export function Avatar({ uri, name, size = 44, onPress, variant = 'default' }: P
         style={[
           styles.initial,
           onDark ? styles.initialOnDark : styles.initialDefault,
-          { fontSize: size * 0.4 },
+          { fontSize: Math.round(size * 0.42) },
         ]}
       >
         {initial}
@@ -49,23 +52,42 @@ export function Avatar({ uri, name, size = 44, onPress, variant = 'default' }: P
     </View>
   );
 
+  const wrapped = (
+    <View
+      style={[
+        styles.ring,
+        onDark && styles.ringOnDark,
+        { width: size + 4, height: size + 4, borderRadius: (size + 4) / 2 },
+      ]}
+    >
+      {content}
+    </View>
+  );
+
   if (onPress) {
     return (
       <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-        {content}
+        {wrapped}
       </Pressable>
     );
   }
 
-  return content;
+  return wrapped;
 }
 
 const styles = StyleSheet.create({
+  ring: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringOnDark: {
+    borderWidth: 2,
+    borderColor: colors.white,
+    backgroundColor: colors.orange,
+  },
   fallback: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
   },
   fallbackDefault: {
     backgroundColor: colors.sage,
@@ -74,7 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.orange,
   },
   initial: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'Outfit_600SemiBold',
   },
   initialDefault: {
     color: colors.white,

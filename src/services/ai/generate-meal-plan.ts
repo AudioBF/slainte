@@ -38,7 +38,12 @@ async function requestMealPlan(
     useProFallback: profile.restrictions.length > 120,
   });
 
-  return mealPlanSchema.parse(raw);
+  const parsed = mealPlanSchema.safeParse(raw);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  throw new Error(`Invalid meal plan: ${parsed.error.issues[0]?.message ?? 'schema'}`);
 }
 
 export async function generateMealPlan(
@@ -53,26 +58,34 @@ export async function generateMealPlan(
   void options;
 
   let lastIssues: string[] = [];
+  let lastError: unknown;
 
   for (let attempt = 0; attempt <= MAX_VARIETY_ATTEMPTS; attempt++) {
-    const plan = await requestMealPlan(profile, attempt > 0 ? lastIssues : undefined);
-    const validation = validateMealPlanVariety(plan);
+    try {
+      const plan = await requestMealPlan(profile, attempt > 0 ? lastIssues : undefined);
+      const validation = validateMealPlanVariety(plan);
 
-    if (validation.ok) {
-      return plan;
-    }
+      if (validation.ok) {
+        return plan;
+      }
 
-    lastIssues = validation.issues;
+      lastIssues = validation.issues;
 
-    if (attempt === MAX_VARIETY_ATTEMPTS) {
-      return {
-        ...plan,
-        summary:
-          (plan.summary ? `${plan.summary} ` : '') +
-          'Plano gerado com algumas repetições — você pode gerar novamente para outra versão.',
-      };
+      if (attempt === MAX_VARIETY_ATTEMPTS) {
+        return {
+          ...plan,
+          summary:
+            (plan.summary ? `${plan.summary} ` : '') +
+            'Plano gerado com algumas repetições — você pode gerar novamente para outra versão.',
+        };
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt === MAX_VARIETY_ATTEMPTS) {
+        throw error;
+      }
     }
   }
 
-  throw new Error('Não foi possível gerar um cardápio válido.');
+  throw lastError ?? new Error('Não foi possível gerar um cardápio válido.');
 }
