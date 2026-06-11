@@ -13,7 +13,7 @@ import {
 } from './schemas/meal-plan.schema';
 import { validateMealPlanVariety } from './validate-meal-plan';
 
-const MAX_VARIETY_ATTEMPTS = 1;
+const MAX_VARIETY_ATTEMPTS = 2;
 
 function mockMealPlan(): MealPlanResult {
   return {
@@ -53,9 +53,8 @@ export async function generateMealPlan(
   void options;
 
   let lastIssues: string[] = [];
-  let lastPlan: MealPlanResult | null = null;
 
-  for (let attempt = 0; attempt < MAX_VARIETY_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt <= MAX_VARIETY_ATTEMPTS; attempt++) {
     const plan = await requestMealPlan(profile, attempt > 0 ? lastIssues : undefined);
     const validation = validateMealPlanVariety(plan);
 
@@ -63,18 +62,16 @@ export async function generateMealPlan(
       return plan;
     }
 
-    lastPlan = plan;
     lastIssues = validation.issues;
-  }
 
-  // Prefer a flawed plan over failing completely — user can regenerate
-  if (lastPlan) {
-    return {
-      ...lastPlan,
-      summary:
-        (lastPlan.summary ? `${lastPlan.summary} ` : '') +
-        '(Aviso: plano com repetição detectada — toque em gerar novamente para outra versão.)',
-    };
+    if (attempt === MAX_VARIETY_ATTEMPTS) {
+      return {
+        ...plan,
+        summary:
+          (plan.summary ? `${plan.summary} ` : '') +
+          'Plano gerado com algumas repetições — você pode gerar novamente para outra versão.',
+      };
+    }
   }
 
   throw new Error('Não foi possível gerar um cardápio válido.');

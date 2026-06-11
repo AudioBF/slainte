@@ -217,6 +217,8 @@ export const useAppStore = create<AppState>()(
         set((s) => ({
           loggedMeals: [...s.loggedMeals, meal],
           photoDraft: null,
+          selectedHistoryDate: todayISO(),
+          viewMode: 'today',
           profile: { ...s.profile, updatedAt: now },
         }));
       },
@@ -248,6 +250,8 @@ export const useAppStore = create<AppState>()(
         };
         set((s) => ({
           loggedMeals: [...s.loggedMeals, logged],
+          selectedHistoryDate: todayISO(),
+          viewMode: 'today',
           profile: { ...s.profile, updatedAt: new Date().toISOString() },
         }));
         return true;

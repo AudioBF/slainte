@@ -65,7 +65,7 @@ export function ScreenHeader({
           hitSlop={8}
           style={styles.avatarBtn}
         >
-          <Avatar uri={avatarUri ?? null} name={name} size={44} />
+          <Avatar uri={avatarUri ?? null} name={name} size={44} variant="onDark" />
         </Pressable>
       ) : null}
     </View>

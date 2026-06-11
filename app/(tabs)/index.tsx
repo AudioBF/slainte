@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Button } from '../../src/components/Button';
 import { AiBadge } from '../../src/components/AiBadge';
 import { CalorieRing } from '../../src/components/CalorieRing';
 import { Card } from '../../src/components/Card';
@@ -131,6 +132,20 @@ export default function TodayScreen() {
           <>
             <DateNavigator date={selectedHistoryDate} onChange={setSelectedHistoryDate} />
 
+            {!isToday ? (
+              <Card style={styles.pastHint}>
+                <Text style={typography.caption}>
+                  Você está vendo um dia anterior. Refeições novas aparecem em Hoje.
+                </Text>
+                <Button
+                  label="Ir para hoje"
+                  onPress={() => setSelectedHistoryDate(todayISO())}
+                  variant="outline"
+                  style={{ marginTop: spacing.sm }}
+                />
+              </Card>
+            ) : null}
+
             <Card>
               <CalorieRing current={dayActual.calories} goal={profile.dailyGoals.calories} />
               <View style={styles.macros}>
@@ -179,7 +194,7 @@ export default function TodayScreen() {
                         icon={SLOT_EMOJI[meal.slot]}
                         eyebrow={meal.fromPlan ? SLOT_LABELS[meal.slot] : 'Por foto'}
                         title={meal.name}
-                        subtitle={`${total.calories} kcal · P ${total.protein}g`}
+                        subtitle={`${total.calories} kcal · P ${Math.round(total.protein)}g`}
                         onPress={() => router.push(`/meal-detail/${meal.id}`)}
                       />
                       {!meal.fromPlan ? (
@@ -295,5 +310,9 @@ const styles = StyleSheet.create({
     marginTop: -spacing.xs,
     marginBottom: spacing.xs,
     paddingLeft: 52,
+  },
+  pastHint: {
+    backgroundColor: colors.cream,
+    marginBottom: spacing.md,
   },
 });

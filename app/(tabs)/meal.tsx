@@ -146,7 +146,7 @@ export default function MealScreen() {
     confirmPhotoMeal(slot, plannedName ?? defaultName, { plannedMealId: plannedId });
     setImageUri(null);
     setImageBase64(null);
-    router.push('/(tabs)/');
+    router.replace('/(tabs)');
   }
 
   return (
