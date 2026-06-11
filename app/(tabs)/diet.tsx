@@ -6,7 +6,8 @@ import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
 import { InputField } from '../../src/components/InputField';
 import { ListRow } from '../../src/components/ListRow';
-import { LoadingState } from '../../src/components/LoadingState';
+import { AiBadge } from '../../src/components/AiBadge';
+import { AiLoadingSkeleton } from '../../src/components/AiLoadingSkeleton';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Section } from '../../src/components/Section';
@@ -91,7 +92,9 @@ export default function DietScreen() {
             style={{ marginTop: spacing.lg }}
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          {generating ? <LoadingState messages={MEAL_PLAN_MESSAGES} active={generating} /> : null}
+          {generating ? (
+            <AiLoadingSkeleton variant="mealPlan" messages={MEAL_PLAN_MESSAGES} active={generating} />
+          ) : null}
         </Card>
       </Section>
 
@@ -127,6 +130,7 @@ export default function DietScreen() {
               </Text>
               <Text style={typography.subtitle}>{meal.name}</Text>
               <StatPill
+                aiEstimate
                 calories={meal.calories}
                 protein={meal.protein}
                 carbs={meal.carbs}

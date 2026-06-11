@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../src/components/Button';
+import { AiBadge } from '../../src/components/AiBadge';
 import { Card } from '../../src/components/Card';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
@@ -32,7 +33,10 @@ export default function RecipeScreen() {
       <ScreenHeader title={recipe.name} subtitle={`${recipe.servings} porções · meal-prep`} />
 
       <Card style={styles.macrosCard}>
-        <Text style={typography.label}>Por porção</Text>
+        <View style={styles.macrosHeader}>
+          <Text style={typography.label}>Por porção</Text>
+          <AiBadge compact />
+        </View>
         <StatPill
           calories={recipe.caloriesPerServing}
           protein={recipe.proteinPerServing}
@@ -73,6 +77,12 @@ export default function RecipeScreen() {
 const styles = StyleSheet.create({
   macrosCard: {
     backgroundColor: colors.cream,
+  },
+  macrosHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   ingredientRow: {
     flexDirection: 'row',

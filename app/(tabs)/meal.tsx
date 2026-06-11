@@ -14,7 +14,8 @@ import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { ChipGroup } from '../../src/components/ChipGroup';
 import { LogoIcon } from '../../src/components/LogoIcon';
-import { LoadingState } from '../../src/components/LoadingState';
+import { AiBadge } from '../../src/components/AiBadge';
+import { AiLoadingSkeleton } from '../../src/components/AiLoadingSkeleton';
 import { PrimaryActionBar } from '../../src/components/PrimaryActionBar';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
@@ -192,7 +193,9 @@ export default function MealScreen() {
                   style={{ marginTop: spacing.md }}
                 />
               )}
-              {analyzing && <LoadingState messages={MEAL_ANALYSIS_MESSAGES} active={analyzing} />}
+              {analyzing && (
+                <AiLoadingSkeleton variant="meal" messages={MEAL_ANALYSIS_MESSAGES} active={analyzing} />
+              )}
               {analyzeError ? (
                 <Text style={[typography.caption, styles.error]}>{analyzeError}</Text>
               ) : null}
@@ -203,6 +206,7 @@ export default function MealScreen() {
             <Section
               title="Componentes detectados"
               subtitle="Ajuste o peso — os valores recalculam automaticamente"
+              action={<AiBadge compact />}
             />
 
             {photoDraft.map((comp) => (
@@ -257,7 +261,10 @@ export default function MealScreen() {
 
             {totals && (
               <Card style={styles.totalCard}>
-                <Text style={typography.label}>Total estimado · IA</Text>
+                <View style={styles.totalHeader}>
+                  <Text style={typography.label}>Total estimado</Text>
+                  <AiBadge compact />
+                </View>
                 <Text style={styles.totalValue}>{totals.calories} kcal</Text>
                 <StatPill
                   protein={totals.protein}
@@ -380,6 +387,12 @@ const styles = StyleSheet.create({
   },
   totalCard: {
     backgroundColor: colors.cream,
+  },
+  totalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   totalValue: {
     fontFamily: 'Fraunces_700Bold',

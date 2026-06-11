@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { radius, spacing } from '../theme/tokens';
@@ -13,6 +14,7 @@ type Props = {
   onPress?: () => void;
   highlighted?: boolean;
   icon?: string;
+  leading?: ReactNode;
 };
 
 export function ListRow({
@@ -24,14 +26,15 @@ export function ListRow({
   onPress,
   highlighted,
   icon,
+  leading,
 }: Props) {
   const content = (
     <View style={[styles.row, highlighted && styles.rowHighlighted]}>
-      {icon ? (
+      {leading ?? (icon ? (
         <View style={styles.iconWrap}>
           <Text style={styles.icon}>{icon}</Text>
         </View>
-      ) : null}
+      ) : null)}
       <View style={styles.body}>
         {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text style={typography.subtitle} numberOfLines={2}>

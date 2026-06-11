@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AiBadge } from '../../src/components/AiBadge';
 import { CalorieRing } from '../../src/components/CalorieRing';
 import { Card } from '../../src/components/Card';
 import { ComparisonBars } from '../../src/components/ComparisonBars';
@@ -176,11 +177,16 @@ export default function TodayScreen() {
                     <View key={meal.id} style={!isLast ? styles.listDivider : undefined}>
                       <ListRow
                         icon={SLOT_EMOJI[meal.slot]}
-                        eyebrow={SLOT_LABELS[meal.slot]}
+                        eyebrow={meal.fromPlan ? SLOT_LABELS[meal.slot] : 'Por foto'}
                         title={meal.name}
-                        subtitle={`${meal.fromPlan ? 'Do plano' : 'Por foto'} · ${total.calories} kcal · P ${total.protein}g`}
+                        subtitle={`${total.calories} kcal · P ${total.protein}g`}
                         onPress={() => router.push(`/meal-detail/${meal.id}`)}
                       />
+                      {!meal.fromPlan ? (
+                        <View style={styles.aiBadgeRow}>
+                          <AiBadge compact />
+                        </View>
+                      ) : null}
                     </View>
                   );
                 })}
@@ -283,5 +289,10 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     marginBottom: spacing.sm,
     paddingBottom: spacing.sm,
+  },
+  aiBadgeRow: {
+    marginTop: -spacing.xs,
+    marginBottom: spacing.xs,
+    paddingLeft: 52,
   },
 });

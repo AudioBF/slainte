@@ -1,10 +1,14 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
+import { ListRow } from '../../src/components/ListRow';
+import { MarketLogo } from '../../src/components/MarketLogo';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Screen } from '../../src/components/Screen';
+import { Section } from '../../src/components/Section';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
+import { spacing } from '../../src/theme/tokens';
 import { typography } from '../../src/theme/typography';
 
 async function openNearestStore(query: string) {
@@ -32,10 +36,6 @@ export default function MarketsScreen() {
         subtitle="Supermercados de Dublin — encontre o mais próximo"
       />
 
-      <Text style={[typography.body, styles.intro]}>
-        Referência rápida dos principais mercados irlandeses. Toque para abrir no mapa.
-      </Text>
-
       {markets.length === 0 ? (
         <Card>
           <EmptyState
@@ -44,20 +44,27 @@ export default function MarketsScreen() {
           />
         </Card>
       ) : (
-        markets.map((market) => (
-          <Pressable key={market.id} onPress={() => openNearestStore(market.searchQuery)}>
-            <Card>
-              <View style={styles.row}>
-                <View style={[styles.dot, { backgroundColor: market.color }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={typography.subtitle}>{market.name}</Text>
-                  <Text style={typography.caption}>Encontrar loja mais próxima</Text>
-                </View>
-                <Text style={styles.arrow}>→</Text>
+        <>
+          <Section
+            title="Redes na região"
+            subtitle="Toque para abrir a loja mais próxima no Google Maps"
+          />
+          <Card flat>
+            {markets.map((market, index) => (
+              <View
+                key={market.id}
+                style={index < markets.length - 1 ? styles.listDivider : undefined}
+              >
+                <ListRow
+                  leading={<MarketLogo market={market} />}
+                  title={market.name}
+                  subtitle="Encontrar loja mais próxima"
+                  onPress={() => openNearestStore(market.searchQuery)}
+                />
               </View>
-            </Card>
-          </Pressable>
-        ))
+            ))}
+          </Card>
+        </>
       )}
 
       <Card style={styles.tip}>
@@ -70,25 +77,14 @@ export default function MarketsScreen() {
 }
 
 const styles = StyleSheet.create({
-  intro: {
-    marginBottom: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  arrow: {
-    fontSize: 20,
-    color: colors.sage,
+  listDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   tip: {
     backgroundColor: colors.cream,
-    marginTop: 8,
+    marginTop: spacing.md,
   },
 });

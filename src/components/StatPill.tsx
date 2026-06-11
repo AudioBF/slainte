@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { AiBadge } from './AiBadge';
 import { colors } from '../theme/colors';
 import { radius, spacing } from '../theme/tokens';
 
@@ -8,9 +9,10 @@ type Props = {
   carbs?: number;
   fat?: number;
   compact?: boolean;
+  aiEstimate?: boolean;
 };
 
-export function StatPill({ calories, protein, carbs, fat, compact }: Props) {
+export function StatPill({ calories, protein, carbs, fat, compact, aiEstimate }: Props) {
   const parts: string[] = [];
   if (calories !== undefined) parts.push(`${calories} kcal`);
   if (protein !== undefined) parts.push(`P ${protein}g`);
@@ -18,7 +20,12 @@ export function StatPill({ calories, protein, carbs, fat, compact }: Props) {
   if (fat !== undefined) parts.push(`G ${fat}g`);
 
   if (compact) {
-    return <Text style={styles.compact}>{parts.join(' · ')}</Text>;
+    return (
+      <View>
+        {aiEstimate ? <AiBadge compact /> : null}
+        <Text style={styles.compact}>{parts.join(' · ')}</Text>
+      </View>
+    );
   }
 
   const items: { key: string; value: string; color: string }[] = [];
@@ -28,7 +35,9 @@ export function StatPill({ calories, protein, carbs, fat, compact }: Props) {
   if (fat !== undefined) items.push({ key: 'g', value: `${fat}g`, color: colors.fat });
 
   return (
-    <View style={styles.row}>
+    <View>
+      {aiEstimate ? <AiBadge compact /> : null}
+      <View style={styles.row}>
       {items.map((item) => (
         <View key={item.key} style={styles.pill}>
           <Text style={[styles.value, { color: item.color }]}>{item.value}</Text>
@@ -37,6 +46,7 @@ export function StatPill({ calories, protein, carbs, fat, compact }: Props) {
           </Text>
         </View>
       ))}
+      </View>
     </View>
   );
 }

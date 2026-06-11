@@ -4,7 +4,7 @@ import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
 import { InputField } from '../../src/components/InputField';
-import { LoadingState } from '../../src/components/LoadingState';
+import { AiLoadingSkeleton } from '../../src/components/AiLoadingSkeleton';
 import { ProgressBar } from '../../src/components/ProgressBar';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
@@ -83,7 +83,7 @@ export default function ShoppingScreen() {
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {generating ? (
-          <LoadingState messages={SHOPPING_LIST_MESSAGES} active={generating} />
+          <AiLoadingSkeleton variant="shopping" messages={SHOPPING_LIST_MESSAGES} active={generating} />
         ) : null}
       </Card>
 
