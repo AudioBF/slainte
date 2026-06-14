@@ -8,13 +8,22 @@ const VISION_MODELS = [
   'gemini-3.1-flash-lite',
 ];
 
+const SHOPPING_LIST_MODELS = [
+  'gemini-2.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-2.5-flash',
+];
+
 const MAX_RETRIES = 2;
 const REQUEST_TIMEOUT_MS = 50_000;
 
+type AiTask = 'vision' | 'shoppingList';
+
 type GenerateStructuredJsonOptions = {
+  task: AiTask;
   prompt: string;
-  imageBase64: string;
-  mimeType: string;
+  imageBase64?: string;
+  mimeType?: string;
   responseSchema: object;
 };
 
@@ -57,6 +66,24 @@ function shouldTryNextModel(error: unknown): boolean {
   return isModelNotFoundError(error) || isTransientUnavailableError(error) || isRequestTimeoutError(error);
 }
 
+function getModelChain(task: AiTask): string[] {
+  switch (task) {
+    case 'vision':
+      return VISION_MODELS;
+    case 'shoppingList':
+      return SHOPPING_LIST_MODELS;
+  }
+}
+
+function temperatureForTask(task: AiTask): number {
+  switch (task) {
+    case 'vision':
+      return 0.2;
+    case 'shoppingList':
+      return 0.4;
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -91,18 +118,28 @@ async function requestOnce<T>(
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: options.responseSchema as Schema,
-      temperature: 0.2,
+      temperature: temperatureForTask(options.task),
     },
   });
+
+  const parts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [
+    { text: options.prompt },
+  ];
+
+  if (options.imageBase64 && options.mimeType) {
+    parts.unshift({
+      inlineData: {
+        data: options.imageBase64,
+        mimeType: options.mimeType,
+      },
+    });
+  }
 
   const result = await withTimeout(
     model.generateContent({
       contents: [{
         role: 'user',
-        parts: [
-          { inlineData: { data: options.imageBase64, mimeType: options.mimeType } },
-          { text: options.prompt },
-        ],
+        parts,
       }],
     }),
     REQUEST_TIMEOUT_MS,
@@ -116,11 +153,12 @@ async function requestOnce<T>(
   return JSON.parse(text) as T;
 }
 
-export async function generateVisionJson<T>(options: GenerateStructuredJsonOptions): Promise<T> {
+export async function generateStructuredJson<T>(options: GenerateStructuredJsonOptions): Promise<T> {
   let lastError: unknown;
+  const models = getModelChain(options.task);
 
-  for (let modelIndex = 0; modelIndex < VISION_MODELS.length; modelIndex++) {
-    const modelName = VISION_MODELS[modelIndex];
+  for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+    const modelName = models[modelIndex];
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -151,7 +189,7 @@ export async function generateVisionJson<T>(options: GenerateStructuredJsonOptio
       }
     }
 
-    const hasNextModel = modelIndex < VISION_MODELS.length - 1;
+    const hasNextModel = modelIndex < models.length - 1;
     if (hasNextModel && lastError && shouldTryNextModel(lastError)) {
       continue;
     }
@@ -160,6 +198,12 @@ export async function generateVisionJson<T>(options: GenerateStructuredJsonOptio
   }
 
   throw lastError ?? new Error('Gemini request failed');
+}
+
+export async function generateVisionJson<T>(
+  options: Omit<GenerateStructuredJsonOptions, 'task'> & { imageBase64: string; mimeType: string },
+): Promise<T> {
+  return generateStructuredJson<T>({ ...options, task: 'vision' });
 }
 
 export function toGeminiErrorInfo(error: unknown): GeminiErrorInfo {
@@ -208,6 +252,6 @@ export function toGeminiErrorInfo(error: unknown): GeminiErrorInfo {
   return {
     code: 'INTERNAL',
     status: 500,
-    message: 'Meal analysis failed.',
+    message: 'AI request failed.',
   };
 }

@@ -45,7 +45,7 @@ export function toAiUserMessage(error: unknown): string {
   const edgeCode = getEdgeErrorCode(error);
 
   if (edgeCode === 'UNAUTHORIZED') {
-    return 'Entre na conta para usar a análise por IA.';
+    return 'Entre na conta para usar a IA.';
   }
 
   if (edgeCode === 'CONFIGURATION') {

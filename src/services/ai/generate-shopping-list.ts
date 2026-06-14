@@ -1,14 +1,9 @@
 import { mockShopping } from '../../data/mock';
 import { createId } from '../../lib/id';
-import { env, hasGeminiKey } from '../../lib/env';
+import { env } from '../../lib/env';
 import type { Recipe, ShoppingItem } from '../../types';
-import { generateStructuredJson } from './client';
-import { buildShoppingListPrompt } from './prompts/shopping-list.prompt';
-import {
-  shoppingListResponseSchema,
-  shoppingListSchema,
-  type ShoppingListResult,
-} from './schemas/shopping-list.schema';
+import { invokeGenerateShoppingList } from './edge-client';
+import { shoppingListSchema, type ShoppingListResult } from './schemas/shopping-list.schema';
 
 function mockShoppingList(): ShoppingListResult {
   return {
@@ -27,7 +22,7 @@ export function mapShoppingListToItems(result: ShoppingListResult): ShoppingItem
 }
 
 export async function generateShoppingList(recipes: Recipe[]): Promise<ShoppingListResult> {
-  if (env.aiMock || !hasGeminiKey()) {
+  if (env.aiMock) {
     await new Promise((r) => setTimeout(r, 800));
     return mockShoppingList();
   }
@@ -36,11 +31,7 @@ export async function generateShoppingList(recipes: Recipe[]): Promise<ShoppingL
     return { items: [] };
   }
 
-  const raw = await generateStructuredJson<unknown>({
-    task: 'shoppingList',
-    prompt: buildShoppingListPrompt(recipes),
-    responseSchema: shoppingListResponseSchema,
-  });
+  const raw = await invokeGenerateShoppingList({ recipes });
 
   return shoppingListSchema.parse(raw);
 }

@@ -41,8 +41,8 @@ Onboard → Set goals → (Optional) Generate diet → Log meals (photo or plan)
 | Language | **TypeScript 6** | Strict typing; Zod for AI response validation |
 | Navigation | **Expo Router 56** | File-based routing under `app/` |
 | State | **Zustand 5** + `persist` middleware | AsyncStorage backend |
-| Backend | **Supabase** | Auth + PostgreSQL + RLS + `analyze-meal` Edge Function |
-| AI | **Google Gemini** (`@google/generative-ai`) | Mixed: meal photo via Supabase Edge Function; meal plan/shopping still client-side |
+| Backend | **Supabase** | Auth + PostgreSQL + RLS + AI Edge Functions |
+| AI | **Google Gemini** (`@google/generative-ai`) | Mixed: meal photo + shopping via Supabase Edge Functions; meal plan still client-side |
 | Images | **expo-image-picker**, **expo-image** | Camera/gallery; base64 sent to `analyze-meal` Edge Function |
 | Fonts | **Fraunces** + **Outfit** (Google Fonts via Expo) | |
 | Deploy (web) | **Vercel** | `npm run build:web` → `dist/` |
@@ -54,12 +54,12 @@ Copy from `.env.example`:
 
 | Variable | Purpose |
 |---|---|
-| `EXPO_PUBLIC_GEMINI_API_KEY` | Temporary client-side Gemini key for remaining `generate-meal-plan` and `generate-shopping-list` flows |
+| `EXPO_PUBLIC_GEMINI_API_KEY` | Temporary client-side Gemini key for remaining `generate-meal-plan` flow |
 | `EXPO_PUBLIC_AI_MOCK` | `"true"` (default) = mock AI; `"false"` = real AI |
 | `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 
-**Security note:** `analyze-meal` now reads `GEMINI_API_KEY` from Supabase Edge Function secrets. `EXPO_PUBLIC_GEMINI_API_KEY` is still temporarily visible in the client bundle because meal plan and shopping list generation have not migrated yet.
+**Security note:** `analyze-meal` and `generate-shopping-list` now read `GEMINI_API_KEY` from Supabase Edge Function secrets. `EXPO_PUBLIC_GEMINI_API_KEY` is still temporarily visible in the client bundle because meal plan generation has not migrated yet.
 
 ### Useful scripts
 
@@ -286,7 +286,7 @@ Merge rules (`src/store/mergePersisted.ts`):
 
 - Meal photos (no Storage integration).
 - Normalized relational tables for meals/recipes (JSON blobs only).
-- Edge Functions for meal plan and shopping list AI (meal photo analysis uses `analyze-meal`).
+- Edge Function for meal plan AI (meal photo and shopping list use Edge Functions).
 - Apple/Google OAuth.
 
 ---
@@ -371,7 +371,11 @@ Service (analyze-meal-photo | generate-meal-plan | generate-shopping-list)
         │       └── supabase.functions.invoke('analyze-meal')
         │               └── Edge Function reads GEMINI_API_KEY secret and calls Gemini vision
         │
-        └── generateMealPlan() / generateShoppingList()
+        ├── generateShoppingList()
+        │       └── supabase.functions.invoke('generate-shopping-list')
+        │               └── Edge Function reads GEMINI_API_KEY secret and calls Gemini text
+        │
+        └── generateMealPlan()
                 └── generateStructuredJson() (src/services/ai/client.ts)
                         ├── EXPO_PUBLIC_GEMINI_API_KEY (temporary)
                         ├── Model chain per task (primary + fallbacks)
@@ -386,9 +390,9 @@ Service (analyze-meal-photo | generate-meal-plan | generate-shopping-list)
 |---|---|---|---|
 | `vision` (meal photo) | Supabase Edge Function `analyze-meal` | `gemini-2.5-flash` | 50s |
 | `mealPlan` | Client-side Gemini (temporary) | `gemini-2.5-flash` (Pro if long restrictions) | 120s |
-| `shoppingList` | Client-side Gemini (temporary) | `gemini-2.5-flash-lite` | 50s |
+| `shoppingList` | Supabase Edge Function `generate-shopping-list` | `gemini-2.5-flash-lite` | 50s |
 
-Fallback chains in `AI_MODEL_FALLBACKS` remain for client-side tasks. The `analyze-meal` Edge Function has its own copied vision fallback chain under `supabase/functions/_shared/gemini.ts`.
+Fallback chains in `AI_MODEL_FALLBACKS` remain for client-side meal plan. Edge Functions have copied fallback chains under `supabase/functions/_shared/gemini.ts`.
 
 ### Prompts
 
@@ -404,7 +408,7 @@ Meal plan prompt enforces meal-prep variety; `validate-meal-plan.ts` checks repe
 
 ### Mock mode
 
-Default: `EXPO_PUBLIC_AI_MOCK=true`. Set to `false` for real AI. Meal photo analysis requires Supabase config, signed-in user, and the Supabase secret `GEMINI_API_KEY`; meal plan/shopping still require `EXPO_PUBLIC_GEMINI_API_KEY` until migrated.
+Default: `EXPO_PUBLIC_AI_MOCK=true`. Set to `false` for real AI. Meal photo analysis and shopping list generation require Supabase config, signed-in user, and the Supabase secret `GEMINI_API_KEY`; meal plan still requires `EXPO_PUBLIC_GEMINI_API_KEY` until migrated.
 
 ---
 
@@ -412,7 +416,7 @@ Default: `EXPO_PUBLIC_AI_MOCK=true`. Set to `false` for real AI. Meal photo anal
 
 | Area | Limitation |
 |---|---|
-| **AI security** | Meal photo key is server-side; meal plan and shopping still expose Gemini key until migrated |
+| **AI security** | Meal photo and shopping keys are server-side; meal plan still exposes Gemini key until migrated |
 | **AI accuracy** | No TACO / Open Food Facts cross-reference; estimates only |
 | **Photos** | Not stored in Supabase Storage; no meal photo history |
 | **Offline AI** | Requires network for real analysis/generation |
@@ -431,7 +435,7 @@ Default: `EXPO_PUBLIC_AI_MOCK=true`. Set to `false` for real AI. Meal photo anal
 
 | Item | Location / notes |
 |---|---|
-| Gemini key in client | `analyze-meal` migrated; migrate meal plan and shopping list next |
+| Gemini key in client | `analyze-meal` and `generate-shopping-list` migrated; migrate meal plan next |
 | JSON blob sync vs normalized DB | Hard to query; large payloads |
 | Duplicate RLS policy in schema | Fixed in Sprint 1A |
 | `+html.tsx` PWA meta not applied on export | Workaround: `scripts/patch-html.mjs` post-build |
@@ -453,7 +457,7 @@ These are planned or partially done — check git `master` and recent commits be
 |---|---|
 | Design system v2 (tokens, Card variants, motion) | Planned (Sprint 4) |
 | Toast / action feedback | Planned |
-| Edge Functions for Gemini | In progress — `analyze-meal` deployed; meal plan/shopping pending |
+| Edge Functions for Gemini | In progress — `analyze-meal` deployed; `generate-shopping-list` implemented; meal plan pending |
 | Chef IA (standalone recipe generator) | Planned |
 | Shopping list by supermarket section | Planned |
 | Drag-and-drop meal plan | Planned |

@@ -1,4 +1,5 @@
 import { getSupabase } from '../supabase/client';
+import type { Recipe } from '../../types';
 
 export type AiEdgeErrorCode =
   | 'BAD_REQUEST'
@@ -31,6 +32,15 @@ type AnalyzeMealBody = {
   mimeType: string;
 };
 
+type GenerateShoppingListBody = {
+  recipes: Recipe[];
+};
+
+type AiFunctionBodyMap = {
+  'analyze-meal': AnalyzeMealBody;
+  'generate-shopping-list': GenerateShoppingListBody;
+};
+
 export class AiEdgeError extends Error {
   readonly code: AiEdgeErrorCode;
   readonly status?: number;
@@ -54,7 +64,10 @@ function getFunctionErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function invokeAiFunction<T>(name: 'analyze-meal', body: AnalyzeMealBody): Promise<T> {
+async function invokeAiFunction<T, TName extends keyof AiFunctionBodyMap>(
+  name: TName,
+  body: AiFunctionBodyMap[TName],
+): Promise<T> {
   const supabase = getSupabase();
   if (!supabase) {
     throw new AiEdgeError('CONFIGURATION', 'Supabase não configurado para chamar a IA.');
@@ -63,7 +76,7 @@ async function invokeAiFunction<T>(name: 'analyze-meal', body: AnalyzeMealBody):
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
   if (sessionError || !accessToken) {
-    throw new AiEdgeError('UNAUTHORIZED', 'Entre na conta para usar a análise por IA.', 401, sessionError);
+    throw new AiEdgeError('UNAUTHORIZED', 'Entre na conta para usar a IA.', 401, sessionError);
   }
 
   const { data, error } = await supabase.functions.invoke<EdgeEnvelope<T>>(name, {
@@ -81,7 +94,7 @@ async function invokeAiFunction<T>(name: 'analyze-meal', body: AnalyzeMealBody):
     );
 
     if (status === 401 || status === 403) {
-      throw new AiEdgeError('UNAUTHORIZED', 'Entre na conta para usar a análise por IA.', status, error);
+      throw new AiEdgeError('UNAUTHORIZED', 'Entre na conta para usar a IA.', status, error);
     }
 
     if (isFetchFailure) {
@@ -104,4 +117,8 @@ async function invokeAiFunction<T>(name: 'analyze-meal', body: AnalyzeMealBody):
 
 export function invokeAnalyzeMeal(body: AnalyzeMealBody): Promise<unknown> {
   return invokeAiFunction('analyze-meal', body);
+}
+
+export function invokeGenerateShoppingList(body: GenerateShoppingListBody): Promise<unknown> {
+  return invokeAiFunction('generate-shopping-list', body);
 }

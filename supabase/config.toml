@@ -2,3 +2,6 @@ project_id = "slainte"
 
 [functions.analyze-meal]
 verify_jwt = true
+
+[functions.generate-shopping-list]
+verify_jwt = true
