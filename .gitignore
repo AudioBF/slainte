@@ -37,6 +37,7 @@ yarn-error.*
 
 # local planning docs (not for commit/deploy)
 .local/
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo
