@@ -14,10 +14,25 @@ const SHOPPING_LIST_MODELS = [
   'gemini-2.5-flash',
 ];
 
-const MAX_RETRIES = 2;
-const REQUEST_TIMEOUT_MS = 50_000;
+const MEAL_PLAN_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-3.5-flash',
+  'gemini-2.5-pro',
+  'gemini-2.5-flash-lite',
+];
 
-type AiTask = 'vision' | 'shoppingList';
+const MEAL_PLAN_PRO_MODELS = [
+  'gemini-2.5-pro',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash-lite',
+];
+
+const MAX_RETRIES = 2;
+const MEAL_PLAN_MAX_RETRIES = 1;
+const REQUEST_TIMEOUT_MS = 50_000;
+const MEAL_PLAN_TIMEOUT_MS = 120_000;
+
+type AiTask = 'vision' | 'mealPlan' | 'shoppingList';
 
 type GenerateStructuredJsonOptions = {
   task: AiTask;
@@ -25,6 +40,7 @@ type GenerateStructuredJsonOptions = {
   imageBase64?: string;
   mimeType?: string;
   responseSchema: object;
+  useProFallback?: boolean;
 };
 
 export type GeminiErrorInfo = {
@@ -66,19 +82,31 @@ function shouldTryNextModel(error: unknown): boolean {
   return isModelNotFoundError(error) || isTransientUnavailableError(error) || isRequestTimeoutError(error);
 }
 
-function getModelChain(task: AiTask): string[] {
+function getModelChain(task: AiTask, useProFallback = false): string[] {
   switch (task) {
     case 'vision':
       return VISION_MODELS;
+    case 'mealPlan':
+      return useProFallback ? MEAL_PLAN_PRO_MODELS : MEAL_PLAN_MODELS;
     case 'shoppingList':
       return SHOPPING_LIST_MODELS;
   }
+}
+
+function maxRetriesForTask(task: AiTask): number {
+  return task === 'mealPlan' ? MEAL_PLAN_MAX_RETRIES : MAX_RETRIES;
+}
+
+function timeoutForTask(task: AiTask): number {
+  return task === 'mealPlan' ? MEAL_PLAN_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
 }
 
 function temperatureForTask(task: AiTask): number {
   switch (task) {
     case 'vision':
       return 0.2;
+    case 'mealPlan':
+      return 0.85;
     case 'shoppingList':
       return 0.4;
   }
@@ -142,7 +170,7 @@ async function requestOnce<T>(
         parts,
       }],
     }),
-    REQUEST_TIMEOUT_MS,
+    timeoutForTask(options.task),
   );
   const text = result.response.text();
 
@@ -155,12 +183,12 @@ async function requestOnce<T>(
 
 export async function generateStructuredJson<T>(options: GenerateStructuredJsonOptions): Promise<T> {
   let lastError: unknown;
-  const models = getModelChain(options.task);
+  const models = getModelChain(options.task, options.useProFallback);
 
   for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
     const modelName = models[modelIndex];
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= maxRetriesForTask(options.task); attempt++) {
       try {
         return await requestOnce<T>(modelName, options);
       } catch (error) {
@@ -175,12 +203,12 @@ export async function generateStructuredJson<T>(options: GenerateStructuredJsonO
         }
 
         const retryDelay = parseRetryAfterMs(error);
-        if (retryDelay && attempt < MAX_RETRIES) {
+        if (retryDelay && attempt < maxRetriesForTask(options.task)) {
           await sleep(retryDelay);
           continue;
         }
 
-        if (isTransientUnavailableError(error) && attempt < MAX_RETRIES) {
+        if (isTransientUnavailableError(error) && attempt < maxRetriesForTask(options.task)) {
           await sleep(1000 * (attempt + 1));
           continue;
         }
@@ -241,7 +269,7 @@ export function toGeminiErrorInfo(error: unknown): GeminiErrorInfo {
     };
   }
 
-  if (/JSON\.parse|Unexpected token/i.test(message)) {
+  if (/Invalid meal plan|JSON\.parse|Unexpected token/i.test(message)) {
     return {
       code: 'VALIDATION',
       status: 502,

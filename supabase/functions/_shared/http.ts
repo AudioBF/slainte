@@ -8,6 +8,7 @@ export type EdgeErrorCode =
   | 'METHOD_NOT_ALLOWED'
   | 'QUOTA_EXCEEDED'
   | 'TIMEOUT'
+  | 'UNAUTHORIZED'
   | 'VALIDATION';
 
 export type EdgeSuccess<T> = {

@@ -7,6 +7,7 @@
 export const env = {
   geminiApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '',
   aiMock: process.env.EXPO_PUBLIC_AI_MOCK !== 'false',
+  useEdgeMealPlan: process.env.EXPO_PUBLIC_USE_EDGE_MEAL_PLAN === 'true',
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
   isDev: __DEV__,

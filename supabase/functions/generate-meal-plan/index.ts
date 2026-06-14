@@ -1,33 +1,21 @@
-import { mockPlannedMeals, mockRecipes } from '../../data/mock';
-import { env, hasGeminiKey } from '../../lib/env';
-import type { UserProfile } from '../../types';
-import { generateStructuredJson } from './client';
-import { invokeGenerateMealPlan } from './edge-client';
+import { requireAuthenticatedUser } from '../_shared/auth.ts';
+import { handleCors } from '../_shared/cors.ts';
+import { generateStructuredJson, toGeminiErrorInfo } from '../_shared/gemini.ts';
+import { jsonError, jsonOk, readJson } from '../_shared/http.ts';
 import {
   buildMealPlanPrompt,
   buildMealPlanRetryPrompt,
-} from './prompts/meal-plan.prompt';
-import {
   mealPlanResponseSchema,
   mealPlanSchema,
   type MealPlanResult,
-} from './schemas/meal-plan.schema';
-import { validateMealPlanVariety } from './validate-meal-plan';
+  type UserProfile,
+  validateMealPlanRequest,
+  validateMealPlanVariety,
+} from '../_shared/meal-plan.ts';
 
 const MAX_VARIETY_ATTEMPTS = 2;
 
-function mockMealPlan(): MealPlanResult {
-  return {
-    recipes: mockRecipes,
-    plannedMeals: mockPlannedMeals,
-    summary: 'Plano simulado — configure EXPO_PUBLIC_GEMINI_API_KEY para geração real.',
-  };
-}
-
-async function requestMealPlan(
-  profile: UserProfile,
-  issues?: string[],
-): Promise<MealPlanResult> {
+async function requestMealPlan(profile: UserProfile, issues?: string[]): Promise<MealPlanResult> {
   const prompt = issues?.length
     ? buildMealPlanRetryPrompt(profile, issues)
     : buildMealPlanPrompt(profile);
@@ -47,27 +35,7 @@ async function requestMealPlan(
   throw new Error(`Invalid meal plan: ${parsed.error.issues[0]?.message ?? 'schema'}`);
 }
 
-export async function generateMealPlan(
-  profile: UserProfile,
-  options?: { useProModel?: boolean },
-): Promise<MealPlanResult> {
-  if (env.aiMock) {
-    await new Promise((r) => setTimeout(r, 1200));
-    return mockMealPlan();
-  }
-
-  void options;
-
-  if (env.useEdgeMealPlan) {
-    const raw = await invokeGenerateMealPlan({ profile });
-    return mealPlanSchema.parse(raw);
-  }
-
-  if (!hasGeminiKey()) {
-    await new Promise((r) => setTimeout(r, 1200));
-    return mockMealPlan();
-  }
-
+async function generateMealPlan(profile: UserProfile): Promise<MealPlanResult> {
   let lastIssues: string[] = [];
   let lastError: unknown;
 
@@ -100,3 +68,39 @@ export async function generateMealPlan(
 
   throw lastError ?? new Error('Não foi possível gerar um cardápio válido.');
 }
+
+Deno.serve(async (req) => {
+  const cors = handleCors(req);
+  if (cors) {
+    return cors;
+  }
+
+  if (req.method !== 'POST') {
+    return jsonError('METHOD_NOT_ALLOWED', 'Use POST for meal plan generation.', 405);
+  }
+
+  const auth = requireAuthenticatedUser(req);
+  if (!auth.ok) {
+    return jsonError('UNAUTHORIZED', auth.error, 401);
+  }
+
+  let body: unknown;
+  try {
+    body = await readJson(req);
+  } catch {
+    return jsonError('BAD_REQUEST', 'Request body must be valid JSON.', 400);
+  }
+
+  const request = validateMealPlanRequest(body);
+  if (!request.ok) {
+    return jsonError('BAD_REQUEST', request.error, 400);
+  }
+
+  try {
+    const plan = await generateMealPlan(request.value.profile);
+    return jsonOk(plan);
+  } catch (error) {
+    const info = toGeminiErrorInfo(error);
+    return jsonError(info.code, info.message, info.status);
+  }
+});

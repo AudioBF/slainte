@@ -1,3 +1,4 @@
+import { requireAuthenticatedUser } from '../_shared/auth.ts';
 import { handleCors } from '../_shared/cors.ts';
 import { generateStructuredJson, toGeminiErrorInfo } from '../_shared/gemini.ts';
 import { jsonError, jsonOk, readJson } from '../_shared/http.ts';
@@ -16,6 +17,11 @@ Deno.serve(async (req) => {
 
   if (req.method !== 'POST') {
     return jsonError('METHOD_NOT_ALLOWED', 'Use POST for shopping list generation.', 405);
+  }
+
+  const auth = requireAuthenticatedUser(req);
+  if (!auth.ok) {
+    return jsonError('UNAUTHORIZED', auth.error, 401);
   }
 
   let body: unknown;

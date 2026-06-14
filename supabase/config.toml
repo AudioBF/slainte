@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.generate-shopping-list]
 verify_jwt = true
+
+[functions.generate-meal-plan]
+verify_jwt = true
