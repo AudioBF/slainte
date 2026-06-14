@@ -7,6 +7,12 @@ export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function getEdgeErrorCode(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
 /** Daily quota exhausted or free tier not available (limit: 0) */
 export function isQuotaExceededError(error: unknown): boolean {
   const message = getErrorMessage(error);
@@ -36,6 +42,35 @@ export function parseRetryAfterMs(error: unknown): number | null {
 
 export function toAiUserMessage(error: unknown): string {
   const message = getErrorMessage(error);
+  const edgeCode = getEdgeErrorCode(error);
+
+  if (edgeCode === 'UNAUTHORIZED') {
+    return 'Entre na conta para usar a análise por IA.';
+  }
+
+  if (edgeCode === 'CONFIGURATION') {
+    return 'Supabase não configurado para usar a IA.';
+  }
+
+  if (edgeCode === 'NETWORK') {
+    return 'Sem conexão estável. Verifique a internet e tente novamente.';
+  }
+
+  if (edgeCode === 'TIMEOUT') {
+    return 'A IA demorou demais para responder. Tente novamente — costuma levar 15–30 segundos.';
+  }
+
+  if (edgeCode === 'QUOTA_EXCEEDED') {
+    return 'Cota da API esgotada. Aguarde o reset ou verifique billing no Google AI Studio.';
+  }
+
+  if (edgeCode === 'GEMINI_UNAVAILABLE') {
+    return 'O Gemini está sobrecarregado no momento. Aguarde alguns segundos e tente de novo.';
+  }
+
+  if (edgeCode === 'BAD_REQUEST' || edgeCode === 'VALIDATION') {
+    return 'A IA retornou um formato inválido. Toque em gerar novamente.';
+  }
 
   if (/free_tier.*limit:\s*0|limit:\s*0,\s*model/i.test(message)) {
     return (

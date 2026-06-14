@@ -1,0 +1,4 @@
+project_id = "slainte"
+
+[functions.analyze-meal]
+verify_jwt = true

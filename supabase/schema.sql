@@ -44,9 +44,6 @@ create policy "user_sync_insert_own" on public.user_sync
 create policy "user_sync_update_own" on public.user_sync
   for update using (auth.uid() = user_id);
 
-create policy "user_sync_update_own" on public.user_sync
-  for update using (auth.uid() = user_id);
-
 -- Opcional: criar perfil automaticamente no signup
 create or replace function public.handle_new_user()
 returns trigger

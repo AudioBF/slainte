@@ -1,14 +1,9 @@
 import { mockPhotoAnalysis } from '../../data/mock';
 import { createId } from '../../lib/id';
-import { env, hasGeminiKey } from '../../lib/env';
+import { env } from '../../lib/env';
 import type { MealComponent } from '../../types';
-import { generateStructuredJson } from './client';
-import { ANALYZE_MEAL_PROMPT } from './prompts/analyze-meal.prompt';
-import {
-  mealAnalysisResponseSchema,
-  mealAnalysisSchema,
-  type MealAnalysisResult,
-} from './schemas/meal-analysis.schema';
+import { invokeAnalyzeMeal } from './edge-client';
+import { mealAnalysisSchema, type MealAnalysisResult } from './schemas/meal-analysis.schema';
 
 export type AnalyzeMealPhotoInput = {
   imageBase64: string;
@@ -40,18 +35,12 @@ export function mapAnalysisToComponents(result: MealAnalysisResult): MealCompone
 }
 
 export async function analyzeMealPhoto(input: AnalyzeMealPhotoInput): Promise<MealAnalysisResult> {
-  if (env.aiMock || !hasGeminiKey()) {
+  if (env.aiMock) {
     await new Promise((r) => setTimeout(r, 800));
     return mockAnalyze();
   }
 
-  const raw = await generateStructuredJson<unknown>({
-    task: 'vision',
-    prompt: ANALYZE_MEAL_PROMPT,
-    imageBase64: input.imageBase64,
-    mimeType: input.mimeType,
-    responseSchema: mealAnalysisResponseSchema,
-  });
+  const raw = await invokeAnalyzeMeal(input);
 
   return mealAnalysisSchema.parse(raw);
 }
