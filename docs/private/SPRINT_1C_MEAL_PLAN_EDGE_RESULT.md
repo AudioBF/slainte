@@ -8,6 +8,10 @@ The client-side Gemini meal plan path remains in place for rollback.
 
 Deployment status: **completed** for project `vukpkqcelmboqnptyceu`.
 
+Vercel deploy status: **passed**.
+
+Production smoke test: **passed** with `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` false/absent.
+
 Validation status: **partially validated**. Auth and rollback behavior passed; signed-in Edge generation reached Gemini but is blocked by quota (`QUOTA_EXCEEDED`).
 
 Auth hardening status: **deployed for all AI Edge Functions**.
@@ -51,6 +55,8 @@ Important: if the Edge Function path fails, the app does **not** silently fallba
 ```env
 EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false
 ```
+
+Production status: `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` remains false or absent, so production continues to use the client-side meal plan fallback.
 
 ## Deploy `generate-meal-plan`
 
@@ -109,6 +115,8 @@ Expected rollback behavior and result: **passed**.
 5. Existing retry/variety behavior remains unchanged.
 
 Observed: Dieta remained functional with the button returning to `Gerar cardápio da semana` and the existing plan visible. This confirms the local rollback path exists.
+
+Production smoke result: **passed** after Vercel deploy with the feature flag false/absent.
 
 ## Test with feature flag on
 
@@ -225,6 +233,8 @@ from the last known good commit, or disable usage by feature flag.
 ## Temporary public Gemini key
 
 `EXPO_PUBLIC_GEMINI_API_KEY` is still temporary and should only be removed after the Edge meal plan path is validated in production.
+
+Production still temporarily requires `EXPO_PUBLIC_GEMINI_API_KEY` because meal plan generation is using the client-side fallback while `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` remains false/absent.
 
 Do not remove yet:
 - `EXPO_PUBLIC_GEMINI_API_KEY`
