@@ -134,6 +134,16 @@ export function selectPrimaryDailyInsight(input: SelectPrimaryDailyInsightInput)
   }
 
   const remaining = Math.round(dailyGoals.calories - dayActual.calories);
+  if (remaining > 0 && dayActual.fat > dailyGoals.fat * 1.15) {
+    return {
+      id: 'fat_high',
+      severity: 'warning',
+      title: 'Atenção à gordura hoje',
+      message:
+        'Você ainda tem calorias disponíveis, mas a gordura já passou da meta. Nas próximas refeições, priorize opções mais leves.',
+    };
+  }
+
   if (remaining > 0) {
     return {
       id: 'on_track',

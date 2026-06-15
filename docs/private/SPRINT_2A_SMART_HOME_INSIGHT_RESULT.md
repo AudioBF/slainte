@@ -1,6 +1,6 @@
 # Sprint 2A — Smart Home InsightCard Result
 
-**Status:** Implemented. Not committed.  
+**Status:** Complete (Sprint 2A).  
 **Scope:** One primary daily insight on the Hoje tab. No AI, no Edge Functions, no store persist changes.
 
 ---
@@ -28,8 +28,9 @@ Priority order in `selectPrimaryDailyInsight`:
 | 2 | `plan_pending` | Plan exists; next **due** planned meal for today not logged (time ≤ now, or slot fallback) | None |
 | 3 | `low_protein` | Protein &lt; 70% of daily goal, **only after 14:00 or ≥2 logged meals** | None |
 | 4 | `over_calories` | Calories &gt; 110% of daily goal | None |
-| 5 | `on_track` | Remaining calories &gt; 0 | None |
-| 6 | `day_complete` | All today's planned meals logged, or all 4 slots filled when no plan | None |
+| 5 | `fat_high` | Fat &gt; 115% of daily goal while calories remain under goal | None |
+| 6 | `on_track` | Remaining calories &gt; 0 | None |
+| 7 | `day_complete` | All today's planned meals logged, or all 4 slots filled when no plan | None |
 
 | fallback | `on_track` | At/near calorie goal but day not "complete" | None |
 
@@ -45,9 +46,12 @@ Priority order in `selectPrimaryDailyInsight`:
 2. **Plan pending** — only suggests unlogged meals whose scheduled time has passed (or slot fallback).
 3. **Day complete copy** — reframed as diary/logging consistency.
 4. **Render guards** — `viewMode === 'today'` in selector memo; `isToday && dailyInsight` in JSX (Semana and past dates never render).
+5. **Fat warning** — `fat_high` when fat &gt; 115% of goal and calories still under daily goal; shown before remaining-calorie `on_track`.
+
+Severity mapping:
 
 - `info` — empty day, plan pending
-- `warning` — low protein, over calories
+- `warning` — low protein, over calories, fat high
 - `success` — on track, day complete
 
 ---
@@ -72,7 +76,8 @@ _To fill after manual testing:_
 | Today, meals logged, protein &lt; 70% goal | "Proteína abaixo do ideal" | |
 | Today, calories &gt; 110% goal | "Acima da meta de calorias" | |
 | Today, under goal with meals | "No caminho certo" + remaining kcal | |
-| Today, all plan meals logged | "Dia registrado" | |
+| Today, under goal, fat &gt; 115% goal | "Atenção à gordura hoje" | |
+| Today, all plan meals logged | "Diário completo" | |
 | Past date selected | No insight card | |
 | Semana tab | No insight card | |
 
@@ -103,6 +108,7 @@ Results:
 5. **Past days** — insight hidden entirely; no historical diagnosis.
 6. **Future plan meals** — before scheduled time, `plan_pending` is suppressed.
 7. **No unit tests** — selector is pure and testable; tests not added in this slice.
+8. **Semana “Plano × Real” shows 0g planned** — observed in manual use when `selectWeekComparison` sums the full plan against calendar days without alignment. Intentionally **not** fixed in Sprint 2A; deferred to a future WeekDiagnosis / weekly comparison sprint (Sprint 2C).
 
 ---
 
