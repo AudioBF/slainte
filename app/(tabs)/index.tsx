@@ -87,7 +87,6 @@ export default function TodayScreen() {
     () => selectMealsForDate(loggedMeals, selectedHistoryDate),
     [loggedMeals, selectedHistoryDate],
   );
-  const showFab = isToday && viewMode === 'today' && dayMeals.length === 0;
   const dayActual = useMemo(
     () =>
       isToday
@@ -114,6 +113,11 @@ export default function TodayScreen() {
     [loggedMeals, weekDays],
   );
 
+  const todayPlanStatus = useMemo(() => {
+    if (!isToday || viewMode !== 'today') return null;
+    return selectTodayPlanStatus(loggedMeals, plannedMeals);
+  }, [isToday, viewMode, loggedMeals, plannedMeals]);
+
   const dailyInsight = useMemo(() => {
     if (!isToday || viewMode !== 'today') return null;
     return selectPrimaryDailyInsight({
@@ -123,6 +127,7 @@ export default function TodayScreen() {
       profileGoal: profile.goal,
       dayMeals,
       dayActual,
+      skipPlanPending: Boolean(todayPlanStatus?.nextUnlogged),
     });
   }, [
     isToday,
@@ -133,12 +138,14 @@ export default function TodayScreen() {
     profile.goal,
     dayMeals,
     dayActual,
+    todayPlanStatus,
   ]);
 
-  const todayPlanStatus = useMemo(() => {
-    if (!isToday || viewMode !== 'today') return null;
-    return selectTodayPlanStatus(loggedMeals, plannedMeals);
-  }, [isToday, viewMode, loggedMeals, plannedMeals]);
+  const showFab =
+    isToday &&
+    viewMode === 'today' &&
+    dayMeals.length === 0 &&
+    !dailyInsight?.actionRoute;
 
   const weeklyInsights = useMemo(() => {
     if (viewMode !== 'week') return [];

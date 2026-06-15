@@ -11,6 +11,8 @@ export type SelectPrimaryDailyInsightInput = {
   profileGoal: ProfileGoal;
   dayMeals: LoggedMeal[];
   dayActual: MacroTotals;
+  /** When TodayPlanSection shows the next meal, skip duplicate plan_pending insight. */
+  skipPlanPending?: boolean;
   /** Optional for tests; defaults to current time. */
   now?: Date;
 };
@@ -80,35 +82,13 @@ function dayCompleteMessage(todayPlanned: PlannedMeal[]): string {
   return 'Você registrou os quatro horários de refeição hoje. Boa consistência no diário.';
 }
 
-/** One primary insight for today's Home tab. Call only when viewing today. */
-export function selectPrimaryDailyInsight(input: SelectPrimaryDailyInsightInput): DailyInsight | null {
-  const { loggedMeals, plannedMeals, dailyGoals, dayMeals, dayActual } = input;
-  const now = input.now ?? new Date();
-  const todayPlanned = selectPlannedMealsForToday(plannedMeals);
-
-  if (dayMeals.length === 0) {
-    return {
-      id: 'empty_day',
-      severity: 'info',
-      title: 'Dia ainda sem registros',
-      message: 'Fotografe sua próxima refeição ou registre uma do cardápio.',
-      actionLabel: 'Fotografar refeição',
-      actionRoute: '/meal',
-    };
-  }
-
-  const dueUnlogged = todayPlanned.find(
-    (m) => !isPlannedMealLoggedToday(loggedMeals, m.id) && isPlannedMealDue(m, now),
-  );
-  if (dueUnlogged) {
-    const slotLabel = SLOT_LABELS[dueUnlogged.slot];
-    return {
-      id: 'plan_pending',
-      severity: 'info',
-      title: `${slotLabel} do plano`,
-      message: `Você ainda não registrou ${slotLabel.toLowerCase()} de hoje: ${dueUnlogged.name} (~${Math.round(dueUnlogged.calories)} kcal).`,
-    };
-  }
+/** Insights after plan_pending (or when plan_pending is skipped). */
+function selectNonPlanInsight(
+  input: SelectPrimaryDailyInsightInput,
+  todayPlanned: PlannedMeal[],
+  now: Date,
+): DailyInsight {
+  const { loggedMeals, dailyGoals, dayMeals, dayActual } = input;
 
   const proteinGap = Math.round(dailyGoals.protein - dayActual.protein);
   if (
@@ -168,4 +148,39 @@ export function selectPrimaryDailyInsight(input: SelectPrimaryDailyInsightInput)
     title: 'No caminho certo',
     message: `Você consumiu ${Math.round(dayActual.calories)} de ${dailyGoals.calories} kcal.`,
   };
+}
+
+/** One primary insight for today's Home tab. Call only when viewing today. */
+export function selectPrimaryDailyInsight(input: SelectPrimaryDailyInsightInput): DailyInsight | null {
+  const { loggedMeals, plannedMeals, dayMeals } = input;
+  const now = input.now ?? new Date();
+  const todayPlanned = selectPlannedMealsForToday(plannedMeals);
+
+  if (dayMeals.length === 0) {
+    return {
+      id: 'empty_day',
+      severity: 'info',
+      title: 'Dia ainda sem registros',
+      message: 'Fotografe sua próxima refeição ou registre uma do cardápio.',
+      actionLabel: 'Fotografar refeição',
+      actionRoute: '/meal',
+    };
+  }
+
+  if (!input.skipPlanPending) {
+    const dueUnlogged = todayPlanned.find(
+      (m) => !isPlannedMealLoggedToday(loggedMeals, m.id) && isPlannedMealDue(m, now),
+    );
+    if (dueUnlogged) {
+      const slotLabel = SLOT_LABELS[dueUnlogged.slot];
+      return {
+        id: 'plan_pending',
+        severity: 'info',
+        title: `${slotLabel} do plano`,
+        message: `Você ainda não registrou ${slotLabel.toLowerCase()} de hoje: ${dueUnlogged.name} (~${Math.round(dueUnlogged.calories)} kcal).`,
+      };
+    }
+  }
+
+  return selectNonPlanInsight(input, todayPlanned, now);
 }
