@@ -15,7 +15,7 @@ import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Section, SectionAction } from '../../src/components/Section';
 import { SegmentedControl } from '../../src/components/SegmentedControl';
 import { TrendChart } from '../../src/components/TrendChart';
-import { selectPrimaryDailyInsight } from '../../src/features/home';
+import { selectPrimaryDailyInsight, selectTodayPlanStatus, TodayPlanSection } from '../../src/features/home';
 import { SLOT_EMOJI, SLOT_LABELS } from '../../src/constants/meals';
 import {
   formatDateLabel,
@@ -72,6 +72,7 @@ export default function TodayScreen() {
   const plannedMeals = useAppStore((s) => s.plannedMeals);
   const selectedHistoryDate = useAppStore((s) => s.selectedHistoryDate);
   const setSelectedHistoryDate = useAppStore((s) => s.setSelectedHistoryDate);
+  const logPlannedMeal = useAppStore((s) => s.logPlannedMeal);
 
   const isToday = selectedHistoryDate === todayISO();
 
@@ -126,6 +127,11 @@ export default function TodayScreen() {
     dayMeals,
     dayActual,
   ]);
+
+  const todayPlanStatus = useMemo(() => {
+    if (!isToday || viewMode !== 'today') return null;
+    return selectTodayPlanStatus(loggedMeals, plannedMeals);
+  }, [isToday, viewMode, loggedMeals, plannedMeals]);
 
   const mealSectionTitle = isToday
     ? 'Refeições de hoje'
@@ -203,6 +209,10 @@ export default function TodayScreen() {
                 />
               </View>
             </Card>
+
+            {todayPlanStatus ? (
+              <TodayPlanSection status={todayPlanStatus} onRegister={logPlannedMeal} />
+            ) : null}
 
             <Section
               title={mealSectionTitle}
