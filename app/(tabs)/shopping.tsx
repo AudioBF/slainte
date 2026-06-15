@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { EmptyState } from '../../src/components/EmptyState';
@@ -9,9 +9,8 @@ import { ProgressBar } from '../../src/components/ProgressBar';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Section, SectionAction } from '../../src/components/Section';
-import { ShoppingListItem } from '../../src/components/ShoppingListItem';
+import { ShoppingSectionList, useShoppingListGenerator } from '../../src/features/shopping';
 import { SHOPPING_LIST_MESSAGES } from '../../src/constants/ai-messages';
-import { useShoppingListGenerator } from '../../src/features/shopping';
 import { hapticLight } from '../../src/lib/haptics';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
@@ -128,23 +127,11 @@ export default function ShoppingScreen() {
           />
         </Card>
       ) : (
-        <Card flat>
-          {shopping.map((item, index) => (
-            <View
-              key={item.id}
-              style={index < shopping.length - 1 ? styles.listDivider : undefined}
-            >
-              <ShoppingListItem
-                name={item.name}
-                quantity={item.quantity}
-                checked={item.checked}
-                fromPlan={item.fromPlan}
-                onToggle={() => handleToggle(item.id)}
-                onRemove={() => removeShoppingItem(item.id)}
-              />
-            </View>
-          ))}
-        </Card>
+        <ShoppingSectionList
+          items={shopping}
+          onToggle={handleToggle}
+          onRemove={removeShoppingItem}
+        />
       )}
     </Screen>
   );
@@ -176,11 +163,5 @@ const styles = StyleSheet.create({
   },
   addCard: {
     backgroundColor: colors.cream,
-  },
-  listDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
   },
 });
