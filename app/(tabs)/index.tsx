@@ -15,7 +15,14 @@ import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Section, SectionAction } from '../../src/components/Section';
 import { SegmentedControl } from '../../src/components/SegmentedControl';
 import { TrendChart } from '../../src/components/TrendChart';
-import { selectPrimaryDailyInsight, selectTodayPlanStatus, TodayPlanSection } from '../../src/features/home';
+import {
+  selectPrimaryDailyInsight,
+  selectTodayPlanStatus,
+  selectWeeklyInsights,
+  shouldShowWeekComparison,
+  TodayPlanSection,
+  WeekDiagnosisCard,
+} from '../../src/features/home';
 import { SLOT_EMOJI, SLOT_LABELS } from '../../src/constants/meals';
 import {
   formatDateLabel,
@@ -132,6 +139,20 @@ export default function TodayScreen() {
     if (!isToday || viewMode !== 'today') return null;
     return selectTodayPlanStatus(loggedMeals, plannedMeals);
   }, [isToday, viewMode, loggedMeals, plannedMeals]);
+
+  const weeklyInsights = useMemo(() => {
+    if (viewMode !== 'week') return [];
+    return selectWeeklyInsights({
+      loggedMeals,
+      plannedMeals,
+      dailyGoals: profile.dailyGoals,
+    });
+  }, [viewMode, loggedMeals, plannedMeals, profile.dailyGoals]);
+
+  const showWeekComparison = useMemo(
+    () => viewMode === 'week' && shouldShowWeekComparison(plannedMeals),
+    [viewMode, plannedMeals],
+  );
 
   const mealSectionTitle = isToday
     ? 'Refeições de hoje'
@@ -254,12 +275,15 @@ export default function TodayScreen() {
           </>
         ) : (
           <>
+            <WeekDiagnosisCard insights={weeklyInsights} />
             <Card>
               <TrendChart data={weekTrend} goal={profile.dailyGoals.calories} />
             </Card>
-            <Card>
-              <ComparisonBars planned={weekComparison.planned} actual={weekComparison.actual} />
-            </Card>
+            {showWeekComparison ? (
+              <Card>
+                <ComparisonBars planned={weekComparison.planned} actual={weekComparison.actual} />
+              </Card>
+            ) : null}
 
             <Section title="Histórico da semana" subtitle="Toque em um dia para ver detalhes" />
 

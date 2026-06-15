@@ -1,3 +1,6 @@
+export { selectWeeklyInsights, selectWeeklyStats, shouldShowWeekComparison } from './selectWeeklyInsights';
+export type { SelectWeeklyInsightsInput, WeeklyInsight, WeeklyStats } from './selectWeeklyInsights';
+export { WeekDiagnosisCard } from './WeekDiagnosisCard';
 export { selectPrimaryDailyInsight } from './selectPrimaryDailyInsight';
 export type { SelectPrimaryDailyInsightInput } from './selectPrimaryDailyInsight';
 export { selectTodayPlanStatus } from './selectTodayPlanStatus';
