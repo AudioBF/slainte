@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { AiBadge } from '../../src/components/AiBadge';
 import { CalorieRing } from '../../src/components/CalorieRing';
+import { InsightCard } from '../../src/components/InsightCard';
 import { Card } from '../../src/components/Card';
 import { ComparisonBars } from '../../src/components/ComparisonBars';
 import { ListRow } from '../../src/components/ListRow';
@@ -14,6 +15,7 @@ import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Section, SectionAction } from '../../src/components/Section';
 import { SegmentedControl } from '../../src/components/SegmentedControl';
 import { TrendChart } from '../../src/components/TrendChart';
+import { selectPrimaryDailyInsight } from '../../src/features/home';
 import { SLOT_EMOJI, SLOT_LABELS } from '../../src/constants/meals';
 import {
   formatDateLabel,
@@ -104,6 +106,27 @@ export default function TodayScreen() {
     [loggedMeals, weekDays],
   );
 
+  const dailyInsight = useMemo(() => {
+    if (!isToday || viewMode !== 'today') return null;
+    return selectPrimaryDailyInsight({
+      loggedMeals,
+      plannedMeals,
+      dailyGoals: profile.dailyGoals,
+      profileGoal: profile.goal,
+      dayMeals,
+      dayActual,
+    });
+  }, [
+    isToday,
+    viewMode,
+    loggedMeals,
+    plannedMeals,
+    profile.dailyGoals,
+    profile.goal,
+    dayMeals,
+    dayActual,
+  ]);
+
   const mealSectionTitle = isToday
     ? 'Refeições de hoje'
     : `Refeições de ${formatDateLabel(selectedHistoryDate).toLowerCase()}`;
@@ -144,6 +167,17 @@ export default function TodayScreen() {
                   style={{ marginTop: spacing.sm }}
                 />
               </Card>
+            ) : null}
+
+            {isToday && dailyInsight ? (
+              <InsightCard
+                insight={dailyInsight}
+                onAction={
+                  dailyInsight.actionRoute
+                    ? () => router.push(dailyInsight.actionRoute!)
+                    : undefined
+                }
+              />
             ) : null}
 
             <Card>
