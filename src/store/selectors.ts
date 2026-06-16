@@ -27,14 +27,33 @@ export function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function selectTodayActual(loggedMeals: LoggedMeal[]): MacroTotals {
-  const today = todayISO();
-  return sumMacros(loggedMeals.filter((m) => m.date === today));
+/** Mon=0 … Sun=6 — matches PlannedMeal.dayIndex. */
+export function isoToDayIndex(iso: string): number {
+  const day = new Date(`${iso}T12:00:00`).getDay();
+  return day === 0 ? 6 : day - 1;
 }
 
-export function selectTodayPlanned(plannedMeals: PlannedMeal[]): MacroTotals {
-  const day = new Date().getDay();
-  const dayIndex = day === 0 ? 6 : day - 1;
+/** Monday of the calendar week containing `iso`. */
+export function startOfWeekMonday(iso: string): string {
+  return offsetDate(iso, -isoToDayIndex(iso));
+}
+
+/** ISO dates from Monday of the current week through `endDate`, inclusive. */
+export function selectWeekToDateDates(endDate = todayISO()): string[] {
+  const dates: string[] = [];
+  let date = startOfWeekMonday(endDate);
+  while (date <= endDate) {
+    dates.push(date);
+    date = offsetDate(date, 1);
+  }
+  return dates;
+}
+
+export function selectPlannedForDate(
+  plannedMeals: PlannedMeal[],
+  date: string,
+): MacroTotals {
+  const dayIndex = isoToDayIndex(date);
   return plannedMeals
     .filter((m) => m.dayIndex === dayIndex)
     .reduce(
@@ -48,21 +67,34 @@ export function selectTodayPlanned(plannedMeals: PlannedMeal[]): MacroTotals {
     );
 }
 
+export function selectTodayActual(loggedMeals: LoggedMeal[]): MacroTotals {
+  const today = todayISO();
+  return sumMacros(loggedMeals.filter((m) => m.date === today));
+}
+
+export function selectTodayPlanned(plannedMeals: PlannedMeal[]): MacroTotals {
+  return selectPlannedForDate(plannedMeals, todayISO());
+}
+
 export function selectWeekComparison(
   loggedMeals: LoggedMeal[],
   plannedMeals: PlannedMeal[],
 ) {
-  const weekDates = new Set(selectRecentDates(7));
-  const planned = plannedMeals.reduce(
-    (acc, m) => ({
-      calories: acc.calories + m.calories,
-      protein: acc.protein + m.protein,
-      carbs: acc.carbs + m.carbs,
-      fat: acc.fat + m.fat,
-    }),
+  const dates = selectWeekToDateDates(todayISO());
+  const dateSet = new Set(dates);
+  const planned = dates.reduce(
+    (acc, date) => {
+      const dayPlanned = selectPlannedForDate(plannedMeals, date);
+      return {
+        calories: acc.calories + dayPlanned.calories,
+        protein: acc.protein + dayPlanned.protein,
+        carbs: acc.carbs + dayPlanned.carbs,
+        fat: acc.fat + dayPlanned.fat,
+      };
+    },
     { calories: 0, protein: 0, carbs: 0, fat: 0 },
   );
-  const actual = sumMacros(loggedMeals.filter((m) => weekDates.has(m.date)));
+  const actual = sumMacros(loggedMeals.filter((m) => dateSet.has(m.date)));
   return { planned, actual };
 }
 

@@ -154,7 +154,7 @@ Root Stack
 - Greeting header with avatar → profile.
 - Segmented control: **Hoje** vs **Semana**.
 - **Hoje:** date navigator, calorie ring, macro bars, **InsightCard** (primary daily insight), **TodayPlanSection** (next planned meal + one-tap register), meal list for selected date.
-- **Semana:** trend chart, **WeekDiagnosisCard** (weekly diagnosis), planned vs actual comparison, week history.
+- **Semana:** trend chart, **WeekDiagnosisCard** (weekly diagnosis), **Plano × Real** (Seg→hoje via `selectWeekComparison`), week history (rolling 7 days).
 - FAB “Fotografar refeição” only when today has **zero** meals and InsightCard is not already showing the photo CTA (dedup polish; otherwise use **+ Nova**).
 
 ### Tab: Refeição (`app/(tabs)/meal.tsx`)
@@ -424,9 +424,9 @@ Default: `EXPO_PUBLIC_AI_MOCK=true`. Set to `false` for real AI. Edge AI require
 | **AI accuracy** | No TACO / Open Food Facts cross-reference; estimates only |
 | **Photos** | Not stored in Supabase Storage; no meal photo history |
 | **Offline AI** | Requires network for real analysis/generation |
-| **Meal plan** | No drag-and-drop; no per-day regeneration |
+| **Meal plan / week view** | Plano × Real uses Seg→hoje (2D); trend/histórico still rolling 7 days (2D+); no drag-and-drop |
 | **Recipes** | No standalone “Chef IA”; recipes only from plan generation |
-| **Shopping** | Section grouping (3A) and checked-item partition (3C) done; no quantity aggregation, collapsible “Comprados”, or “market mode” yet |
+| **Shopping** | Sections (3A), checked-item ordering (3C), and expanded keyword dictionary (3B) done; no quantity aggregation, collapsible “Comprados”, market mode, manual section override, or product/price matching |
 | **Profile** | No weight/height/age/TDEE calculator |
 | **Auth** | Email/password only |
 | **Native** | Expo Go incompatible with SDK 56; use web PWA or dev client |
@@ -490,19 +490,39 @@ Docs: `docs/private/SPRINT_3A_SHOPPING_SECTIONS_*`
 
 Docs: `docs/private/SHOPPING_3C_CHECKED_ITEMS_*`
 
+**Shopping 3B — Keyword dictionary** ✅
+
+| Delivered | Notes |
+|---|---|
+| Priority passes | Congelados, Mercearia pantry phrases, Temperos herbs (plus existing caldo pass) |
+| Expanded keyword set | ~10–15 high-value PT/EN terms per section in `shoppingSections.ts` |
+| Safety polish | Exact-only bare `sal`; no bare `gelado`/`gelada`; no generic `lata` |
+| No persisted data shape change | Render-time inference only; 3A/3C behavior preserved |
+
+Docs: `docs/private/SHOPPING_3B_KEYWORDS_*`
+
+**Sprint 2D — Plano × Real by calendar day** ✅
+
+| Delivered | Notes |
+|---|---|
+| Week-to-date comparison | **Plano × Real** uses Segunda → hoje for both planned and actual macros |
+| Selector-only | `isoToDayIndex`, `selectWeekToDateDates`, `selectPlannedForDate` in `selectors.ts` |
+| No persisted data shape change | `PlannedMeal.dayIndex` mapping at render time; no `planWeekStart` field |
+
+Docs: `docs/private/SPRINT_2D_PLAN_VS_ACTUAL_*`
+
 ### Known backlog (next work)
 
 | Item | Description |
 |---|---|
-| **Shopping 3B** | Expand keyword dictionary from real generated lists |
-| **Sprint 2D** | Align **Plano × Real** comparison by calendar day (week view) |
-| **Meal review polish** | Sticky footer on meal review screen |
-| **Meal plan Edge Function** | Still behind `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` due to Gemini quota; client rollback path remains |
+| **Meal review polish** | Sticky footer on meal review screen — **recommended next sprint** |
+| **Meal plan Edge Function** | Still behind `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` due to Gemini quota; enable only when quota stable |
 
 **Optional follow-up (not immediate):**
 
 | Item | Description |
 |---|---|
+| **Sprint 2D+** | Align TrendChart / Histórico to calendar week (or add copy) — Plano × Real already Seg→hoje |
 | **Shopping 3C+** | Collapsible per-section **Comprados** if real shopping tests still feel noisy |
 
 ### Other planned (not started)
@@ -521,6 +541,8 @@ Docs: `docs/private/SHOPPING_3C_CHECKED_ITEMS_*`
 - Sprint 2 Smart Home (InsightCard, TodayPlanSection, WeekDiagnosisCard, dedup polish)
 - Sprint 3A Shopping Sections (section grouping + keyword tuning)
 - Shopping 3C Checked Items UX (view-only partition; restantes headers)
+- Shopping 3B Keyword dictionary (priority passes + safety polish)
+- Sprint 2D Plano × Real (Seg→hoje week comparison)
 - Cloud sync merge (prevent empty cloud wipe)
 - Web layout centering + Android safe area
 - Dieta clean UX (generator first, day picker modal, recipe on meal tap)
@@ -553,15 +575,13 @@ Prioritized roadmap (product + technical):
 
 ### Tier 1 — Near term
 
-1. **Shopping 3B** — keyword dictionary expansion from real lists.
-2. **Sprint 2D** — Plano × Real aligned by calendar day.
-3. **Meal review sticky footer** polish.
-4. **Meal plan Edge rollout** — enable when Gemini quota allows; remove client key rollback.
-5. **Toast + haptic feedback** — register meal, generate plan, sync complete.
-6. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
-7. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
+1. **Meal review sticky footer** polish.
+2. **Meal plan Edge rollout** — enable when Gemini quota allows; remove client key rollback.
+3. **Toast + haptic feedback** — register meal, generate plan, sync complete.
+4. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
+5. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
 
-**Optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados** if in-store use still feels noisy (not immediate priority).
+**Optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week (not immediate priority).
 
 ### Tier 2 — Medium term
 
