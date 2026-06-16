@@ -64,6 +64,20 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'manga',
     'kiwi',
     'aipo',
+    'tomate cereja',
+    'batata doce',
+    'sweet potato',
+    'abobora',
+    'beterraba',
+    'rucula',
+    'mix de folhas',
+    'alho poro',
+    'cebola roxa',
+    'abacaxi',
+    'pera',
+    'milho verde',
+    'vagem',
+    'salada crua',
   ],
   proteinas: [
     'frango',
@@ -96,6 +110,19 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'merluza',
     'bacalhau',
     'sardinha',
+    'coxa de frango',
+    'sobrecoxa',
+    'file de frango',
+    'carne moida',
+    'ground beef',
+    'salmao fresco',
+    'salmon fillet',
+    'lata de atum',
+    'atum enlatado',
+    'peito de peru',
+    'peru defumado',
+    'presunto',
+    'camarao descascado',
   ],
   laticinios: [
     'leite',
@@ -115,6 +142,18 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'nata',
     'ricota',
     'requeij',
+    'iogurte grego',
+    'greek yogurt',
+    'iogurte natural',
+    'leite desnatado',
+    'cream cheese',
+    'philadelphia',
+    'feta',
+    'cheddar',
+    'mussarela',
+    'queijo ralado',
+    'kefir',
+    'double cream',
   ],
   mercearia: [
     'arroz',
@@ -156,6 +195,20 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'sementes de chia',
     'chia seeds',
     'chia',
+    'massa integral',
+    'wrap integral',
+    'wrap',
+    'tortilha',
+    'tortilla',
+    'feijao preto',
+    'sementes de linhaca',
+    'linhaca',
+    'flaxseed',
+    'tahine',
+    'tahini',
+    'farinha de trigo',
+    'passata',
+    'polpa de tomate',
   ],
   temperos: [
     'caldo de legumes',
@@ -196,8 +249,32 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'noz-moscada',
     'gengibre',
     'gergelim',
+    'sal fino',
+    'sal refinado',
+    'pimenta do reino',
+    'tomilho',
+    'louro',
+    'endro',
+    'hortela',
+    'colorau',
+    'acafrao',
+    'shoyu',
+    'caldo em po',
   ],
-  congelados: ['congelado', 'congelada', 'frozen', 'gelado', 'gelada'],
+  congelados: [
+    'brocolis congelado',
+    'espinafre congelado',
+    'mix de vegetais congelado',
+    'ervilha congelada',
+    'peixe congelado',
+    'congelado',
+    'congelada',
+    'congelados',
+    'congeladas',
+    'frozen',
+    'gelado',
+    'gelada',
+  ],
 };
 
 export function normalizeForMatch(name: string): string {
@@ -223,6 +300,43 @@ const TEMPEROS_PRIORITY_KEYWORDS = [
   'broth',
 ];
 
+/** Frozen terms win over produce keywords like "brocolis" in "brocolis congelado". */
+const CONGELADOS_PRIORITY_KEYWORDS = [
+  'mix de vegetais congelados',
+  'vegetais congelados',
+  'brocolis congelado',
+  'espinafre congelado',
+  'ervilha congelada',
+  'peixe congelado',
+  'congelados',
+  'congeladas',
+  'congelado',
+  'congelada',
+  'frozen',
+];
+
+/** Pantry phrases win over "leite"/"tomate" in laticínios/hortifruti. */
+const MERCEARIA_PRIORITY_KEYWORDS = [
+  'creme de leite de coco',
+  'leite de coco',
+  'creme de coco',
+  'extrato de tomate',
+  'tomato paste',
+  'polpa de tomate',
+  'molho de tomate',
+  'passata',
+];
+
+/** Fresh herbs win over "cebola" in hortifruti (e.g. cebolinha). */
+const TEMPEROS_HERBS_PRIORITY_KEYWORDS = [
+  'cebolinha verde',
+  'cebolinha fresca',
+  'cebolinha',
+  'coentro fresco',
+  'coentro',
+  'cilantro',
+];
+
 function matchesSectionKeywords(
   normalizedName: string,
   keywords: string[],
@@ -231,11 +345,33 @@ function matchesSectionKeywords(
   return sorted.some((keyword) => matchesKeyword(normalizedName, keyword));
 }
 
+/**
+ * 3B regression spot-check:
+ * caldo→temperos, cebolinha/coentro→temperos, extrato/leite de coco→mercearia,
+ * brocolis congelado→congelados, salmão→proteinas (no bare "sal" substring).
+ */
 /** First matching section wins; default outros. */
 export function inferShoppingSection(name: string): ShoppingSectionId {
   const normalized = normalizeForMatch(name);
 
   if (matchesSectionKeywords(normalized, TEMPEROS_PRIORITY_KEYWORDS)) {
+    return 'temperos';
+  }
+
+  if (matchesSectionKeywords(normalized, CONGELADOS_PRIORITY_KEYWORDS)) {
+    return 'congelados';
+  }
+
+  if (matchesSectionKeywords(normalized, MERCEARIA_PRIORITY_KEYWORDS)) {
+    return 'mercearia';
+  }
+
+  if (matchesSectionKeywords(normalized, TEMPEROS_HERBS_PRIORITY_KEYWORDS)) {
+    return 'temperos';
+  }
+
+  // Exact-only: avoid matching salmão, salada, etc.
+  if (normalized === 'sal') {
     return 'temperos';
   }
 
