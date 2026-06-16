@@ -3,7 +3,7 @@ import { handleCors } from '../_shared/cors.ts';
 import { generateStructuredJson, toGeminiErrorInfo } from '../_shared/gemini.ts';
 import { jsonError, jsonOk, readJson } from '../_shared/http.ts';
 import {
-  buildShoppingListPrompt,
+  buildShoppingListRequestPrompt,
   shoppingListResponseSchema,
   shoppingListSchema,
   validateShoppingListRequest,
@@ -36,14 +36,10 @@ Deno.serve(async (req) => {
     return jsonError('BAD_REQUEST', request.error, 400);
   }
 
-  if (request.value.recipes.length === 0) {
-    return jsonOk({ items: [] });
-  }
-
   try {
     const raw = await generateStructuredJson<unknown>({
       task: 'shoppingList',
-      prompt: buildShoppingListPrompt(request.value.recipes),
+      prompt: buildShoppingListRequestPrompt(request.value),
       responseSchema: shoppingListResponseSchema,
     });
 

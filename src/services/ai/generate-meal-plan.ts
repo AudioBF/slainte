@@ -1,4 +1,4 @@
-import { mockPlannedMeals, mockRecipes } from '../../data/mock';
+import { mockPlannedMeals } from '../../data/mock';
 import { env, hasGeminiKey } from '../../lib/env';
 import type { UserProfile } from '../../types';
 import { generateStructuredJson } from './client';
@@ -18,8 +18,8 @@ const MAX_VARIETY_ATTEMPTS = 2;
 
 function mockMealPlan(): MealPlanResult {
   return {
-    recipes: mockRecipes,
-    plannedMeals: mockPlannedMeals,
+    recipes: [],
+    plannedMeals: mockPlannedMeals.map(({ recipeId: _recipeId, ...meal }) => meal),
     summary: 'Plano simulado — configure EXPO_PUBLIC_GEMINI_API_KEY para geração real.',
   };
 }

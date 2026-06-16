@@ -59,55 +59,40 @@ const plannedMealSchema = z.object({
 });
 
 export const mealPlanSchema = z.object({
-  recipes: z.array(recipeSchema),
+  recipes: z.array(recipeSchema).optional(),
   plannedMeals: z.array(plannedMealSchema),
   summary: z.string().optional(),
 });
 
 export type UserProfile = z.infer<typeof userProfileSchema>;
-export type MealPlanResult = z.infer<typeof mealPlanSchema>;
+export type MealPlanResult = {
+  recipes: [];
+  plannedMeals: Omit<z.infer<typeof plannedMealSchema>, 'recipeId'>[];
+  summary?: string;
+};
 
+export function normalizeLightweightMealPlan(
+  input: z.infer<typeof mealPlanSchema>,
+): MealPlanResult {
+  return {
+    recipes: [],
+    summary: input.summary,
+    plannedMeals: input.plannedMeals.map(({ recipeId: _recipeId, ...meal }) => meal),
+  };
+}
+
+export function parseMealPlanResult(raw: unknown): MealPlanResult {
+  const parsed = mealPlanSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(`Invalid meal plan: ${parsed.error.issues[0]?.message ?? 'schema'}`);
+  }
+  return normalizeLightweightMealPlan(parsed.data);
+}
+
+/** Gemini structured output — planned meals only (no recipes). */
 export const mealPlanResponseSchema = {
   type: SchemaType.OBJECT,
   properties: {
-    recipes: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          id: { type: SchemaType.STRING },
-          name: { type: SchemaType.STRING },
-          servings: { type: SchemaType.NUMBER },
-          ingredients: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.OBJECT,
-              properties: {
-                name: { type: SchemaType.STRING },
-                amount: { type: SchemaType.STRING },
-              },
-              required: ['name', 'amount'],
-            },
-          },
-          steps: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          caloriesPerServing: { type: SchemaType.NUMBER },
-          proteinPerServing: { type: SchemaType.NUMBER },
-          carbsPerServing: { type: SchemaType.NUMBER },
-          fatPerServing: { type: SchemaType.NUMBER },
-        },
-        required: [
-          'id',
-          'name',
-          'servings',
-          'ingredients',
-          'steps',
-          'caloriesPerServing',
-          'proteinPerServing',
-          'carbsPerServing',
-          'fatPerServing',
-        ],
-      },
-    },
     plannedMeals: {
       type: SchemaType.ARRAY,
       items: {
@@ -118,7 +103,6 @@ export const mealPlanResponseSchema = {
           slot: { type: SchemaType.STRING, enum: ['breakfast', 'lunch', 'dinner', 'snack'] },
           time: { type: SchemaType.STRING },
           name: { type: SchemaType.STRING },
-          recipeId: { type: SchemaType.STRING },
           calories: { type: SchemaType.NUMBER },
           protein: { type: SchemaType.NUMBER },
           carbs: { type: SchemaType.NUMBER },
@@ -129,7 +113,7 @@ export const mealPlanResponseSchema = {
     },
     summary: { type: SchemaType.STRING },
   },
-  required: ['recipes', 'plannedMeals'],
+  required: ['plannedMeals'],
 };
 
 const generateMealPlanRequestSchema = z.object({
@@ -162,9 +146,14 @@ Escreva como um humano — nomes apetitosos, rotação inteligente, nada de plan
 - Meta diária: ${profile.dailyGoals.calories} kcal · P ${profile.dailyGoals.protein}g · C ${profile.dailyGoals.carbs}g · G ${profile.dailyGoals.fat}g
 - Restrições: ${profile.restrictions || 'nenhuma informada'}
 
+## Formato da resposta (IMPORTANTE)
+- Retorne APENAS plannedMeals + summary.
+- NÃO inclua array recipes.
+- NÃO inclua recipeId nas refeições.
+
 ## O que é meal-prep (IMPORTANTE)
 Meal-prep NÃO é comer o MESMO prato 7 dias seguidos.
-É cozinhar 5–8 receitas-base no fim de semana e ROTACIONAR combinações ao longo da semana.
+É variar proteínas e acompanhamentos ao longo da semana, reutilizando preparos quando fizer sentido.
 
 Exemplo correto:
 - Seg almoço: bowl de frango · Ter almoço: salada com atum · Qua almoço: bowl de frango (sobra) · Qui almoço: wrap de peru
@@ -178,13 +167,14 @@ Exemplo ERRADO (nunca faça):
 1. 7 dias completos (dayIndex 0=Segunda … 6=Domingo), cada um com café, almoço e jantar
 2. Mínimo 3 cafés diferentes, 4 almoços diferentes, 4 jantares diferentes na semana
 3. No máximo 2 dias com cardápio 100% idêntico (sobras de prep)
-4. 5 a 8 receitas-base reutilizáveis (recipeId nas refeições que usam receita)
+4. Nomes descritivos o bastante para compras: inclua proteína + base + preparo (ex: "Bowl de frango grelhado, arroz integral e brócolis")
 5. Ingredientes encontrados em Lidl, Aldi, Tesco, Dunnes, SuperValu
 6. Horários realistas (HH:MM, 24h)
-7. Textos em português brasileiro natural — evite nomes genéricos como "Refeição 1"
-8. Campo "summary": 2–3 frases humanas explicando a lógica da semana (ex: "Domingo preparamos frango e arroz; durante a semana alternamos bowls, wraps e saladas")
-9. Respeite restrições alimentares rigorosamente
-10. Sugestão automática — não substitui orientação médica
+7. Macros por refeição coerentes com a meta diária (soma diária ~meta)
+8. Textos em português brasileiro natural — evite nomes genéricos como "Refeição 1"
+9. Campo "summary": 2–3 frases humanas explicando a lógica da semana
+10. Respeite restrições alimentares rigorosamente
+11. Sugestão automática — não substitui orientação médica
 
 ## Estrutura sugerida (adapte ao perfil)
 ${WEEK_DAYS.map((day, i) => `- ${day} (dayIndex ${i}): varie proteína e acompanhamento`).join('\n')}
@@ -259,16 +249,6 @@ export function validateMealPlanVariety(plan: MealPlanResult): MealPlanValidatio
   }
   if (dinnerCount < 4) {
     issues.push(`Jantar: apenas ${dinnerCount} pratos distintos (mínimo 4).`);
-  }
-
-  if (plan.recipes.length < 5) {
-    issues.push(
-      `Poucas receitas-base: ${plan.recipes.length}. Crie entre 5 e 8 receitas para rotacionar na semana.`,
-    );
-  }
-
-  if (plan.recipes.length > 10) {
-    issues.push(`Receitas demais (${plan.recipes.length}). Consolidar em meal-prep com no máximo 8 receitas.`);
   }
 
   const daysWithMeals = new Set(plan.plannedMeals.map((meal) => meal.dayIndex));

@@ -139,7 +139,7 @@ export default function DietScreen() {
             </Card>
           ) : null}
 
-          <Section title="Cardápio" subtitle="Escolha o dia e toque na refeição para ver a receita" />
+          <Section title="Cardápio" subtitle="Escolha o dia — veja macros e registre refeições" />
 
           <Card flat>
             <DayPickerRow

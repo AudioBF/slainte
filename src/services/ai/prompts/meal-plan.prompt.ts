@@ -17,9 +17,14 @@ Escreva como um humano — nomes apetitosos, rotação inteligente, nada de plan
 - Meta diária: ${profile.dailyGoals.calories} kcal · P ${profile.dailyGoals.protein}g · C ${profile.dailyGoals.carbs}g · G ${profile.dailyGoals.fat}g
 - Restrições: ${profile.restrictions || 'nenhuma informada'}
 
+## Formato da resposta (IMPORTANTE)
+- Retorne APENAS plannedMeals + summary.
+- NÃO inclua array recipes.
+- NÃO inclua recipeId nas refeições.
+
 ## O que é meal-prep (IMPORTANTE)
 Meal-prep NÃO é comer o MESMO prato 7 dias seguidos.
-É cozinhar 5–8 receitas-base no fim de semana e ROTACIONAR combinações ao longo da semana.
+É variar proteínas e acompanhamentos ao longo da semana, reutilizando preparos quando fizer sentido.
 
 Exemplo correto:
 - Seg almoço: bowl de frango · Ter almoço: salada com atum · Qua almoço: bowl de frango (sobra) · Qui almoço: wrap de peru
@@ -33,13 +38,14 @@ Exemplo ERRADO (nunca faça):
 1. 7 dias completos (dayIndex 0=Segunda … 6=Domingo), cada um com café, almoço e jantar
 2. Mínimo 3 cafés diferentes, 4 almoços diferentes, 4 jantares diferentes na semana
 3. No máximo 2 dias com cardápio 100% idêntico (sobras de prep)
-4. 5 a 8 receitas-base reutilizáveis (recipeId nas refeições que usam receita)
+4. Nomes descritivos o bastante para compras: inclua proteína + base + preparo (ex: "Bowl de frango grelhado, arroz integral e brócolis")
 5. Ingredientes encontrados em Lidl, Aldi, Tesco, Dunnes, SuperValu
 6. Horários realistas (HH:MM, 24h)
-7. Textos em português brasileiro natural — evite nomes genéricos como "Refeição 1"
-8. Campo "summary": 2–3 frases humanas explicando a lógica da semana (ex: "Domingo preparamos frango e arroz; durante a semana alternamos bowls, wraps e saladas")
-9. Respeite restrições alimentares rigorosamente
-10. Sugestão automática — não substitui orientação médica
+7. Macros por refeição coerentes com a meta diária (soma diária ~meta)
+8. Textos em português brasileiro natural — evite nomes genéricos como "Refeição 1"
+9. Campo "summary": 2–3 frases humanas explicando a lógica da semana
+10. Respeite restrições alimentares rigorosamente
+11. Sugestão automática — não substitui orientação médica
 
 ## Estrutura sugerida (adapte ao perfil)
 ${WEEK_DAYS.map((day, i) => `- ${day} (dayIndex ${i}): varie proteína e acompanhamento`).join('\n')}

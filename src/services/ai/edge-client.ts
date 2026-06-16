@@ -1,5 +1,5 @@
 import { getSupabase } from '../supabase/client';
-import type { Recipe, UserProfile } from '../../types';
+import type { PlannedMeal, Recipe, UserProfile } from '../../types';
 
 export type AiEdgeErrorCode =
   | 'BAD_REQUEST'
@@ -32,9 +32,13 @@ type AnalyzeMealBody = {
   mimeType: string;
 };
 
-type GenerateShoppingListBody = {
-  recipes: Recipe[];
-};
+type GenerateShoppingListBody =
+  | {
+      recipes: Array<Pick<Recipe, 'name' | 'servings' | 'ingredients'>>;
+    }
+  | {
+      plannedMeals: Array<Pick<PlannedMeal, 'name' | 'slot' | 'dayIndex'>>;
+    };
 
 type GenerateMealPlanBody = {
   profile: UserProfile;
@@ -150,6 +154,15 @@ async function invokeAiFunction<T, TName extends keyof AiFunctionBodyMap>(
 
     if (status === 401 || status === 403) {
       throw new AiEdgeError('UNAUTHORIZED', 'Entre na conta para usar a IA.', status, error);
+    }
+
+    if (status === 504) {
+      throw new AiEdgeError(
+        'TIMEOUT',
+        'A IA demorou demais para responder. Tente novamente — costuma levar 15–30 segundos.',
+        status,
+        error,
+      );
     }
 
     if (isFetchFailure) {

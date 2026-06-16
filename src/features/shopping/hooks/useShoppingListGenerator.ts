@@ -5,6 +5,7 @@ import { useAppStore } from '../../../store/useAppStore';
 
 export function useShoppingListGenerator() {
   const recipes = useAppStore((s) => s.recipes);
+  const plannedMeals = useAppStore((s) => s.plannedMeals);
   const setShopping = useAppStore((s) => s.setShopping);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,7 +14,7 @@ export function useShoppingListGenerator() {
     setLoading(true);
     setError(null);
     try {
-      const result = await generateShoppingList(recipes);
+      const result = await generateShoppingList({ recipes, plannedMeals });
       setShopping(mapShoppingListToItems(result));
       return result;
     } catch (e) {
@@ -23,7 +24,7 @@ export function useShoppingListGenerator() {
     } finally {
       setLoading(false);
     }
-  }, [recipes, setShopping]);
+  }, [plannedMeals, recipes, setShopping]);
 
   return { generate, loading, error };
 }

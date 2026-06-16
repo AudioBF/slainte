@@ -63,16 +63,6 @@ export function validateMealPlanVariety(plan: MealPlanResult): MealPlanValidatio
     issues.push(`Jantar: apenas ${dinnerCount} pratos distintos (mínimo ${minDinner}).`);
   }
 
-  if (plan.recipes.length < 5) {
-    issues.push(
-      `Poucas receitas-base: ${plan.recipes.length}. Crie entre 5 e 8 receitas para rotacionar na semana.`,
-    );
-  }
-
-  if (plan.recipes.length > 10) {
-    issues.push(`Receitas demais (${plan.recipes.length}). Consolidar em meal-prep com no máximo 8 receitas.`);
-  }
-
   const daysWithMeals = new Set(plan.plannedMeals.map((m) => m.dayIndex));
   if (daysWithMeals.size < 7) {
     issues.push(`Faltam dias no plano: apenas ${daysWithMeals.size} de 7.`);

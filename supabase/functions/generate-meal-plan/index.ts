@@ -1,21 +1,34 @@
 import { requireAuthenticatedUser } from '../_shared/auth.ts';
 import { handleCors } from '../_shared/cors.ts';
+import {
+  ExecutionBudget,
+  ExecutionBudgetExceededError,
+  MIN_BUDGET_FOR_VARIETY_RETRY_MS,
+  logMealPlanBudget,
+} from '../_shared/execution-budget.ts';
 import { generateStructuredJson, toGeminiErrorInfo } from '../_shared/gemini.ts';
 import { jsonError, jsonOk, readJson } from '../_shared/http.ts';
 import {
   buildMealPlanPrompt,
   buildMealPlanRetryPrompt,
   mealPlanResponseSchema,
-  mealPlanSchema,
+  normalizeLightweightMealPlan,
+  parseMealPlanResult,
   type MealPlanResult,
   type UserProfile,
   validateMealPlanRequest,
   validateMealPlanVariety,
 } from '../_shared/meal-plan.ts';
 
-const MAX_VARIETY_ATTEMPTS = 2;
+/** At most one variety retry (2 Gemini generations) when budget allows. */
+const MAX_VARIETY_ATTEMPTS = 1;
 
-async function requestMealPlan(profile: UserProfile, issues?: string[]): Promise<MealPlanResult> {
+async function requestMealPlan(
+  profile: UserProfile,
+  budget: ExecutionBudget,
+  varietyAttempt: number,
+  issues?: string[],
+): Promise<MealPlanResult> {
   const prompt = issues?.length
     ? buildMealPlanRetryPrompt(profile, issues)
     : buildMealPlanPrompt(profile);
@@ -25,23 +38,33 @@ async function requestMealPlan(profile: UserProfile, issues?: string[]): Promise
     prompt,
     responseSchema: mealPlanResponseSchema,
     useProFallback: profile.restrictions.length > 120,
+    budget,
+    varietyAttempt,
   });
 
-  const parsed = mealPlanSchema.safeParse(raw);
-  if (parsed.success) {
-    return parsed.data;
-  }
-
-  throw new Error(`Invalid meal plan: ${parsed.error.issues[0]?.message ?? 'schema'}`);
+  const parsed = parseMealPlanResult(raw);
+  return parsed;
 }
 
-async function generateMealPlan(profile: UserProfile): Promise<MealPlanResult> {
+async function generateMealPlan(profile: UserProfile, budget: ExecutionBudget): Promise<MealPlanResult> {
   let lastIssues: string[] = [];
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= MAX_VARIETY_ATTEMPTS; attempt++) {
+    if (attempt > 0 && !budget.canStartCall(MIN_BUDGET_FOR_VARIETY_RETRY_MS)) {
+      logMealPlanBudget({
+        requestId: budget.requestId,
+        attempt,
+        elapsedMs: budget.elapsedMs(),
+        remainingBudgetMs: budget.remainingMs(),
+        event: 'variety_skip',
+        code: 'INSUFFICIENT_BUDGET',
+      });
+      break;
+    }
+
     try {
-      const plan = await requestMealPlan(profile, attempt > 0 ? lastIssues : undefined);
+      const plan = await requestMealPlan(profile, budget, attempt, attempt > 0 ? lastIssues : undefined);
       const validation = validateMealPlanVariety(plan);
 
       if (validation.ok) {
@@ -51,15 +74,18 @@ async function generateMealPlan(profile: UserProfile): Promise<MealPlanResult> {
       lastIssues = validation.issues;
 
       if (attempt === MAX_VARIETY_ATTEMPTS) {
-        return {
+        return normalizeLightweightMealPlan({
           ...plan,
           summary:
             (plan.summary ? `${plan.summary} ` : '') +
             'Plano gerado com algumas repetições — você pode gerar novamente para outra versão.',
-        };
+        });
       }
     } catch (error) {
       lastError = error;
+      if (isExecutionBudgetExceeded(error)) {
+        throw error;
+      }
       if (attempt === MAX_VARIETY_ATTEMPTS) {
         throw error;
       }
@@ -67,6 +93,29 @@ async function generateMealPlan(profile: UserProfile): Promise<MealPlanResult> {
   }
 
   throw lastError ?? new Error('Não foi possível gerar um cardápio válido.');
+}
+
+function isExecutionBudgetExceeded(error: unknown): boolean {
+  return (
+    error instanceof ExecutionBudgetExceededError ||
+    (error instanceof Error && error.message === 'EXECUTION_BUDGET_EXCEEDED')
+  );
+}
+
+function budgetTimeoutResponse(budget: ExecutionBudget): Response {
+  logMealPlanBudget({
+    requestId: budget.requestId,
+    attempt: -1,
+    elapsedMs: budget.elapsedMs(),
+    remainingBudgetMs: budget.remainingMs(),
+    event: 'budget_exceeded',
+    code: 'TIMEOUT',
+  });
+  return jsonError(
+    'TIMEOUT',
+    'Meal plan generation exceeded the safe time budget. Try again.',
+    504,
+  );
 }
 
 Deno.serve(async (req) => {
@@ -84,6 +133,9 @@ Deno.serve(async (req) => {
     return jsonError('UNAUTHORIZED', auth.error, 401);
   }
 
+  const requestId = crypto.randomUUID();
+  const budget = new ExecutionBudget(requestId);
+
   let body: unknown;
   try {
     body = await readJson(req);
@@ -97,10 +149,29 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const plan = await generateMealPlan(request.value.profile);
+    const plan = await generateMealPlan(request.value.profile, budget);
+    logMealPlanBudget({
+      requestId,
+      attempt: 0,
+      elapsedMs: budget.elapsedMs(),
+      remainingBudgetMs: budget.remainingMs(),
+      event: 'success',
+      code: 'OK',
+    });
     return jsonOk(plan);
   } catch (error) {
+    if (isExecutionBudgetExceeded(error)) {
+      return budgetTimeoutResponse(budget);
+    }
     const info = toGeminiErrorInfo(error);
+    logMealPlanBudget({
+      requestId,
+      attempt: -1,
+      elapsedMs: budget.elapsedMs(),
+      remainingBudgetMs: budget.remainingMs(),
+      event: 'error',
+      code: info.code,
+    });
     return jsonError(info.code, info.message, info.status);
   }
 });

@@ -34,55 +34,34 @@ const plannedMealSchema = z.object({
   fat: macroInt.pipe(z.number().nonnegative()),
 });
 
-export const mealPlanSchema = z.object({
-  recipes: z.array(recipeSchema),
+const mealPlanInputSchema = z.object({
+  recipes: z.array(recipeSchema).optional(),
   plannedMeals: z.array(plannedMealSchema),
   summary: z.string().optional(),
 });
 
+export function normalizeLightweightMealPlan(
+  input: z.infer<typeof mealPlanInputSchema>,
+): {
+  recipes: [];
+  plannedMeals: Omit<z.infer<typeof plannedMealSchema>, 'recipeId'>[];
+  summary?: string;
+} {
+  return {
+    recipes: [],
+    summary: input.summary,
+    plannedMeals: input.plannedMeals.map(({ recipeId: _recipeId, ...meal }) => meal),
+  };
+}
+
+export const mealPlanSchema = mealPlanInputSchema.transform(normalizeLightweightMealPlan);
+
 export type MealPlanResult = z.infer<typeof mealPlanSchema>;
 
+/** Gemini structured output — planned meals only (no recipes). */
 export const mealPlanResponseSchema = {
   type: SchemaType.OBJECT,
   properties: {
-    recipes: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          id: { type: SchemaType.STRING },
-          name: { type: SchemaType.STRING },
-          servings: { type: SchemaType.NUMBER },
-          ingredients: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.OBJECT,
-              properties: {
-                name: { type: SchemaType.STRING },
-                amount: { type: SchemaType.STRING },
-              },
-              required: ['name', 'amount'],
-            },
-          },
-          steps: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          caloriesPerServing: { type: SchemaType.NUMBER },
-          proteinPerServing: { type: SchemaType.NUMBER },
-          carbsPerServing: { type: SchemaType.NUMBER },
-          fatPerServing: { type: SchemaType.NUMBER },
-        },
-        required: [
-          'id',
-          'name',
-          'servings',
-          'ingredients',
-          'steps',
-          'caloriesPerServing',
-          'proteinPerServing',
-          'carbsPerServing',
-          'fatPerServing',
-        ],
-      },
-    },
     plannedMeals: {
       type: SchemaType.ARRAY,
       items: {
@@ -93,7 +72,6 @@ export const mealPlanResponseSchema = {
           slot: { type: SchemaType.STRING, enum: ['breakfast', 'lunch', 'dinner', 'snack'] },
           time: { type: SchemaType.STRING },
           name: { type: SchemaType.STRING },
-          recipeId: { type: SchemaType.STRING },
           calories: { type: SchemaType.NUMBER },
           protein: { type: SchemaType.NUMBER },
           carbs: { type: SchemaType.NUMBER },
@@ -104,5 +82,5 @@ export const mealPlanResponseSchema = {
     },
     summary: { type: SchemaType.STRING },
   },
-  required: ['recipes', 'plannedMeals'],
+  required: ['plannedMeals'],
 };

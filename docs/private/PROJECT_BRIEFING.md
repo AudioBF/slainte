@@ -56,11 +56,13 @@ Copy from `.env.example`:
 |---|---|
 | `EXPO_PUBLIC_GEMINI_API_KEY` | Temporary client-side Gemini key for meal plan rollback while Sprint 1C is validated |
 | `EXPO_PUBLIC_AI_MOCK` | `"true"` (default) = mock AI; `"false"` = real AI |
-| `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` | `"true"` = use `generate-meal-plan` Edge Function; unset/`"false"` = temporary client Gemini rollback path |
+| `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` | `"true"` = use `generate-meal-plan` Edge Function; unset/`"false"` = temporary client Gemini rollback path (**production: `false` as of 2026-06-16 — canary rolled back**) |
 | `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 
 **Security note:** AI Edge Functions read `GEMINI_API_KEY` from Supabase secrets. `EXPO_PUBLIC_GEMINI_API_KEY` remains temporarily visible in the client bundle only for meal plan rollback while Sprint 1C is validated.
+
+**Production meal plan (2026-06-16):** **Meal Plan Lightweight v1** ✅ — weekly generation returns `plannedMeals` + `summary` only (`recipes: []`). Shopping list accepts `plannedMeals` when no recipes. Edge smoke **3/3**, P95 **~33 s**, shopping **41 items**. Production stays `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false` (client Gemini). Next: **recipe on demand** sprint. See `docs/private/MEAL_PLAN_LIGHTWEIGHT_RESULT.md`.
 
 ### Useful scripts
 
@@ -292,7 +294,7 @@ Merge rules (`src/store/mergePersisted.ts`):
 
 - Meal photos (no Storage integration).
 - Normalized relational tables for meals/recipes (JSON blobs only).
-- Production-validated meal plan Edge rollout (function exists behind feature flag).
+- Meal plan **Lightweight v1** deployed (planned meals only; `recipes: []` on new generations). **Production uses client Gemini** (`EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false`).
 - Apple/Google OAuth.
 
 ---
@@ -569,7 +571,7 @@ Docs: `docs/private/DIET_PLANNED_PHOTO_DEDUP_*`
 
 | Item | Description |
 |---|---|
-| **Meal plan Edge rollout** ⭐ | **Next recommended** — Enable when Gemini quota is stable; remove client key rollback |
+| **Recipe on demand** ⭐ | Generate full recipe when user taps a planned meal (future `generate-recipe` Edge fn) |
 | **Design system v2** | Tokens, Card/Button variants, tighter hierarchy, basic Reanimated |
 | **TDEE onboarding** | Calculator in onboarding/profile |
 
@@ -644,7 +646,7 @@ Prioritized roadmap (product + technical):
 
 ### Tier 1 — Near term
 
-1. **Meal plan Edge rollout** ⭐ — enable when Gemini quota is stable; remove client key rollback (**next recommended implementation**).
+1. **Recipe on demand** ⭐ — `generate-recipe` Edge function + Dieta CTA when user wants preparation details for a planned meal.
 2. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
 3. **TDEE-based onboarding** — calculator in onboarding/profile.
 4. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.

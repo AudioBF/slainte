@@ -60,6 +60,10 @@ export function toAiUserMessage(error: unknown): string {
     return 'A IA demorou demais para responder. Tente novamente — costuma levar 15–30 segundos.';
   }
 
+  if (edgeCode === 'FUNCTION' || edgeCode === 'INTERNAL') {
+    return 'Não foi possível completar a operação. Tente novamente.';
+  }
+
   if (edgeCode === 'QUOTA_EXCEEDED') {
     return 'Cota da API esgotada. Aguarde o reset ou verifique billing no Google AI Studio.';
   }

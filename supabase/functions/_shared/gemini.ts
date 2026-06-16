@@ -1,4 +1,11 @@
 import { GoogleGenerativeAI, type Schema } from 'npm:@google/generative-ai@0.24.1';
+import {
+  ExecutionBudget,
+  ExecutionBudgetExceededError,
+  MIN_BUDGET_FOR_UNAVAILABLE_RETRY_MS,
+  MIN_BUDGET_TO_START_CALL_MS,
+  logMealPlanBudget,
+} from './execution-budget.ts';
 import type { EdgeErrorCode } from './http.ts';
 
 const VISION_MODELS = [
@@ -29,6 +36,9 @@ const MEAL_PLAN_PRO_MODELS = [
 
 const MAX_RETRIES = 2;
 const MEAL_PLAN_MAX_RETRIES = 1;
+const MEAL_PLAN_UNAVAILABLE_MAX_RETRIES = 1;
+const UNAVAILABLE_RETRY_DELAY_MIN_MS = 2_000;
+const UNAVAILABLE_RETRY_DELAY_MAX_MS = 4_000;
 const REQUEST_TIMEOUT_MS = 50_000;
 const MEAL_PLAN_TIMEOUT_MS = 120_000;
 
@@ -41,6 +51,9 @@ type GenerateStructuredJsonOptions = {
   mimeType?: string;
   responseSchema: object;
   useProFallback?: boolean;
+  budget?: ExecutionBudget;
+  /** 0-based variety attempt index (meal plan only). */
+  varietyAttempt?: number;
 };
 
 export type GeminiErrorInfo = {
@@ -69,8 +82,72 @@ function isTransientUnavailableError(error: unknown): boolean {
   return /503|500|502|504|high demand|overloaded|UNAVAILABLE/i.test(getErrorMessage(error));
 }
 
+/** Retryable 503/overload only — excludes quota, timeout, 5xx outside 503. */
+function isRetryableUnavailableError(error: unknown): boolean {
+  if (
+    isQuotaExceededError(error) ||
+    isRequestTimeoutError(error) ||
+    isExecutionBudgetExceededError(error) ||
+    isModelNotFoundError(error)
+  ) {
+    return false;
+  }
+
+  const message = getErrorMessage(error);
+  if (/\b401\b|unauthorized/i.test(message)) {
+    return false;
+  }
+  if (/\b400\b|bad request/i.test(message)) {
+    return false;
+  }
+  if (/Invalid meal plan|JSON\.parse|Unexpected token/i.test(message)) {
+    return false;
+  }
+  if (/GEMINI_API_KEY is not configured/i.test(message)) {
+    return false;
+  }
+
+  return (
+    /\b503\b|status:\s*503/i.test(message) ||
+    /overload(?:ed)?|high demand|\bUNAVAILABLE\b/i.test(message)
+  );
+}
+
+function unavailableRetryDelayMs(): number {
+  const span = UNAVAILABLE_RETRY_DELAY_MAX_MS - UNAVAILABLE_RETRY_DELAY_MIN_MS;
+  return UNAVAILABLE_RETRY_DELAY_MIN_MS + Math.floor(Math.random() * (span + 1));
+}
+
+function unavailableRetrySkipReason(
+  error: unknown,
+  budget: ExecutionBudget,
+  geminiAttempt: number,
+  delayMs: number,
+): string {
+  if (geminiAttempt >= MEAL_PLAN_UNAVAILABLE_MAX_RETRIES) {
+    return 'ALREADY_RETRIED';
+  }
+  if (!isRetryableUnavailableError(error)) {
+    return 'NOT_RETRYABLE';
+  }
+  if (budget.remainingMs() < MIN_BUDGET_FOR_UNAVAILABLE_RETRY_MS) {
+    return 'INSUFFICIENT_BUDGET';
+  }
+  if (budget.remainingMs() - delayMs < MIN_BUDGET_TO_START_CALL_MS) {
+    return 'INSUFFICIENT_BUDGET_AFTER_DELAY';
+  }
+  return 'UNKNOWN';
+}
+
 function isRequestTimeoutError(error: unknown): boolean {
   return getErrorMessage(error) === 'REQUEST_TIMEOUT';
+}
+
+function isExecutionBudgetExceededError(error: unknown): boolean {
+  return (
+    error instanceof ExecutionBudgetExceededError ||
+    getErrorMessage(error) === 'EXECUTION_BUDGET_EXCEEDED'
+  );
 }
 
 function parseRetryAfterMs(error: unknown): number | null {
@@ -140,6 +217,7 @@ function getApiKey(): string {
 async function requestOnce<T>(
   modelName: string,
   options: GenerateStructuredJsonOptions,
+  timeoutMs: number,
 ): Promise<T> {
   const model = new GoogleGenerativeAI(getApiKey()).getGenerativeModel({
     model: modelName,
@@ -170,7 +248,7 @@ async function requestOnce<T>(
         parts,
       }],
     }),
-    timeoutForTask(options.task),
+    timeoutMs,
   );
   const text = result.response.text();
 
@@ -183,16 +261,76 @@ async function requestOnce<T>(
 
 export async function generateStructuredJson<T>(options: GenerateStructuredJsonOptions): Promise<T> {
   let lastError: unknown;
-  const models = getModelChain(options.task, options.useProFallback);
+  const budget = options.budget;
+  const varietyAttempt = options.varietyAttempt ?? 0;
+  let models = getModelChain(options.task, options.useProFallback);
 
-  for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+  if (budget && options.task === 'mealPlan' && budget.remainingMs() < MIN_BUDGET_FOR_UNAVAILABLE_RETRY_MS) {
+    models = models.slice(0, 1);
+  }
+
+  const maxModelAttempts = budget && options.task === 'mealPlan'
+    ? 1
+    : models.length;
+
+  for (let modelIndex = 0; modelIndex < Math.min(models.length, maxModelAttempts); modelIndex++) {
     const modelName = models[modelIndex];
+    const isMealPlanBudget = Boolean(budget && options.task === 'mealPlan');
+    const maxAttempts = isMealPlanBudget
+      ? MEAL_PLAN_UNAVAILABLE_MAX_RETRIES
+      : maxRetriesForTask(options.task);
 
-    for (let attempt = 0; attempt <= maxRetriesForTask(options.task); attempt++) {
+    for (let geminiAttempt = 0; geminiAttempt <= maxAttempts; geminiAttempt++) {
+      if (budget) {
+        budget.assertCanStartCall(MIN_BUDGET_TO_START_CALL_MS);
+        logMealPlanBudget({
+          requestId: budget.requestId,
+          attempt: varietyAttempt,
+          geminiAttempt,
+          model: modelName,
+          elapsedMs: budget.elapsedMs(),
+          remainingBudgetMs: budget.remainingMs(),
+          event: 'gemini_start',
+        });
+      }
+
+      const perCallTimeout = budget
+        ? budget.callTimeoutMs(timeoutForTask(options.task))
+        : timeoutForTask(options.task);
+
       try {
-        return await requestOnce<T>(modelName, options);
+        const result = await requestOnce<T>(modelName, options, perCallTimeout);
+        if (budget) {
+          logMealPlanBudget({
+            requestId: budget.requestId,
+            attempt: varietyAttempt,
+            geminiAttempt,
+            model: modelName,
+            elapsedMs: budget.elapsedMs(),
+            remainingBudgetMs: budget.remainingMs(),
+            event: 'gemini_end',
+          });
+        }
+        return result;
       } catch (error) {
         lastError = error;
+
+        if (budget) {
+          logMealPlanBudget({
+            requestId: budget.requestId,
+            attempt: varietyAttempt,
+            geminiAttempt,
+            model: modelName,
+            elapsedMs: budget.elapsedMs(),
+            remainingBudgetMs: budget.remainingMs(),
+            code: getErrorMessage(error),
+            event: 'error',
+          });
+        }
+
+        if (isExecutionBudgetExceededError(error)) {
+          throw error;
+        }
 
         if (isQuotaExceededError(error)) {
           throw error;
@@ -202,14 +340,64 @@ export async function generateStructuredJson<T>(options: GenerateStructuredJsonO
           break;
         }
 
+        if (budget && !budget.canStartCall(MIN_BUDGET_TO_START_CALL_MS)) {
+          throw new ExecutionBudgetExceededError();
+        }
+
+        if (isMealPlanBudget && budget) {
+          const delayMs = unavailableRetryDelayMs();
+          const canRetry =
+            geminiAttempt < MEAL_PLAN_UNAVAILABLE_MAX_RETRIES &&
+            isRetryableUnavailableError(error) &&
+            budget.remainingMs() >= MIN_BUDGET_FOR_UNAVAILABLE_RETRY_MS &&
+            budget.remainingMs() - delayMs >= MIN_BUDGET_TO_START_CALL_MS;
+
+          if (canRetry) {
+            logMealPlanBudget({
+              requestId: budget.requestId,
+              attempt: varietyAttempt,
+              geminiAttempt: geminiAttempt + 1,
+              model: modelName,
+              elapsedMs: budget.elapsedMs(),
+              remainingBudgetMs: budget.remainingMs(),
+              code: 'GEMINI_UNAVAILABLE',
+              event: 'retry_scheduled',
+            });
+            await sleep(delayMs);
+            continue;
+          }
+
+          if (geminiAttempt < MEAL_PLAN_UNAVAILABLE_MAX_RETRIES) {
+            logMealPlanBudget({
+              requestId: budget.requestId,
+              attempt: varietyAttempt,
+              geminiAttempt: geminiAttempt + 1,
+              model: modelName,
+              elapsedMs: budget.elapsedMs(),
+              remainingBudgetMs: budget.remainingMs(),
+              code: unavailableRetrySkipReason(error, budget, geminiAttempt, delayMs),
+              event: 'retry_skipped',
+            });
+          }
+
+          break;
+        }
+
         const retryDelay = parseRetryAfterMs(error);
-        if (retryDelay && attempt < maxRetriesForTask(options.task)) {
+        if (retryDelay && geminiAttempt < maxAttempts) {
+          if (budget && retryDelay > budget.remainingMs() - MIN_BUDGET_TO_START_CALL_MS) {
+            throw new ExecutionBudgetExceededError();
+          }
           await sleep(retryDelay);
           continue;
         }
 
-        if (isTransientUnavailableError(error) && attempt < maxRetriesForTask(options.task)) {
-          await sleep(1000 * (attempt + 1));
+        if (isTransientUnavailableError(error) && geminiAttempt < maxAttempts) {
+          const backoffMs = 1000 * (geminiAttempt + 1);
+          if (budget && backoffMs > budget.remainingMs() - MIN_BUDGET_TO_START_CALL_MS) {
+            throw new ExecutionBudgetExceededError();
+          }
+          await sleep(backoffMs);
           continue;
         }
 
@@ -217,8 +405,11 @@ export async function generateStructuredJson<T>(options: GenerateStructuredJsonO
       }
     }
 
-    const hasNextModel = modelIndex < models.length - 1;
+    const hasNextModel = modelIndex < Math.min(models.length, maxModelAttempts) - 1;
     if (hasNextModel && lastError && shouldTryNextModel(lastError)) {
+      if (budget && !budget.canStartCall(MIN_BUDGET_TO_START_CALL_MS)) {
+        throw new ExecutionBudgetExceededError();
+      }
       continue;
     }
 
@@ -253,7 +444,7 @@ export function toGeminiErrorInfo(error: unknown): GeminiErrorInfo {
     };
   }
 
-  if (isRequestTimeoutError(error)) {
+  if (isRequestTimeoutError(error) || isExecutionBudgetExceededError(error)) {
     return {
       code: 'TIMEOUT',
       status: 504,
