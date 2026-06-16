@@ -183,6 +183,7 @@ Can be deep-linked from Dieta with `?slot=&name=&plannedId=`.
 - Progress bar for checked items.
 - List grouped by **supermarket section** (Hortifruti, Proteínas, Laticínios, Mercearia, Temperos, Congelados, Outros) via local keyword inference at render time — `ShoppingItem` shape unchanged.
 - Checked items render at the **bottom of each section** (view-only partition); section headers show **restantes** when the section has checked items.
+- **Marcar todos** / **Desmarcar todos** — bulk check/uncheck entire list (`setAllShoppingChecked`); **Limpar marcados** removes checked items (unchanged).
 - **Do cardápio** → AI shopping list from `plannedMeals` (requires existing plan).
 - Manual add/remove; collapsible add form.
 
@@ -428,7 +429,7 @@ Default: `EXPO_PUBLIC_AI_MOCK=true`. Set to `false` for real AI. Edge AI require
 | **Offline AI** | Requires network for real analysis/generation |
 | **Meal plan / week view** | Plano × Real uses Seg→hoje (2D); trend/histórico still rolling 7 days (2D+); no drag-and-drop |
 | **Recipes** | No standalone “Chef IA”; recipes only from plan generation |
-| **Shopping** | Sections (3A), checked-item ordering (3C), and expanded keyword dictionary (3B) done; no quantity aggregation, collapsible “Comprados”, market mode, manual section override, or product/price matching |
+| **Shopping** | Sections (3A), keywords (3B), checked-item ordering (3C), bulk mark/unmark (3D) done; no quantity aggregation, collapsible “Comprados”, per-section bulk, multi-select, market mode, manual section override, or product/price matching |
 | **Profile** | No weight/height/age/TDEE calculator |
 | **Auth** | Email/password only |
 | **Native** | Expo Go incompatible with SDK 56; use web PWA or dev client |
@@ -491,6 +492,16 @@ Docs: `docs/private/SPRINT_3A_SHOPPING_SECTIONS_*`
 | No persisted data shape change | `ShoppingItem`, Zustand store, persistence, AI, and Edge paths unchanged |
 
 Docs: `docs/private/SHOPPING_3C_CHECKED_ITEMS_*`
+
+**Shopping 3D — Bulk actions** ✅
+
+| Delivered | Notes |
+|---|---|
+| **Marcar todos** / **Desmarcar todos** | Global bulk check/uncheck in progress card |
+| `setAllShoppingChecked(checked)` | Idempotent; no array reorder; `ShoppingItem` shape unchanged |
+| **Limpar marcados** unchanged | Still removes checked items (not uncheck) |
+
+Docs: `docs/private/SHOPPING_3D_BULK_ACTIONS_*`
 
 **Shopping 3B — Keyword dictionary** ✅
 
@@ -558,8 +569,7 @@ Docs: `docs/private/DIET_PLANNED_PHOTO_DEDUP_*`
 
 | Item | Description |
 |---|---|
-| **Shopping 3D bulk actions** ⭐ | **Next recommended** — Marcar todos / Desmarcar todos; multi-select, bulk check/remove |
-| **Meal plan Edge rollout** | Enable when Gemini quota is stable; remove client key rollback |
+| **Meal plan Edge rollout** ⭐ | **Next recommended** — Enable when Gemini quota is stable; remove client key rollback |
 | **Design system v2** | Tokens, Card/Button variants, tighter hierarchy, basic Reanimated |
 | **TDEE onboarding** | Calculator in onboarding/profile |
 
@@ -575,6 +585,7 @@ Docs: `docs/private/DIET_PLANNED_PHOTO_DEDUP_*`
 
 | Item | Description |
 |---|---|
+| **Shopping 3D+** | Multi-select, per-section bulk, bulk remove selected |
 | **Shopping 3C+** | Collapsible per-section **Comprados** if real shopping tests still feel noisy |
 | **Sprint 2D+** | Align TrendChart / Histórico to calendar week (or add copy) — Plano × Real already Seg→hoje |
 
@@ -592,6 +603,7 @@ Docs: `docs/private/DIET_PLANNED_PHOTO_DEDUP_*`
 
 - Sprint 2 Smart Home (InsightCard, TodayPlanSection, WeekDiagnosisCard, dedup polish)
 - Sprint 3A Shopping Sections (section grouping + keyword tuning)
+- Shopping 3D Bulk actions (Marcar todos / Desmarcar todos; setAllShoppingChecked)
 - Shopping 3C Checked Items UX (view-only partition; restantes headers)
 - Shopping 3B Keyword dictionary (priority passes + safety polish)
 - Sprint 2D Plano × Real (Seg→hoje week comparison)
@@ -632,15 +644,14 @@ Prioritized roadmap (product + technical):
 
 ### Tier 1 — Near term
 
-1. **Shopping 3D bulk actions** ⭐ — Marcar todos / Desmarcar todos; multi-select, bulk check, bulk remove (**next recommended implementation**).
-2. **Meal plan Edge rollout** — enable when Gemini quota is stable; remove client key rollback.
-3. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
-4. **TDEE-based onboarding** — calculator in onboarding/profile.
-5. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
+1. **Meal plan Edge rollout** ⭐ — enable when Gemini quota is stable; remove client key rollback (**next recommended implementation**).
+2. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
+3. **TDEE-based onboarding** — calculator in onboarding/profile.
+4. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
 
 **UX polish (optional):** disabled **Fotografar** styling; **kcal** suffix on Histórico week totals; **%** labels on Plano × Real.
 
-**Other optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week.
+**Other optional follow-up:** **Shopping 3D+** — multi-select / per-section bulk; **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week.
 
 ### Tier 2 — Medium term
 

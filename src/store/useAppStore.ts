@@ -66,6 +66,7 @@ type AppState = PersistedSlice & {
   addShoppingItem: (name: string, quantity: string) => void;
   removeShoppingItem: (id: string) => void;
   clearCheckedShopping: () => void;
+  setAllShoppingChecked: (checked: boolean) => void;
   setSelectedDietDay: (day: number) => void;
   setViewMode: (mode: 'today' | 'week') => void;
   setSelectedHistoryDate: (date: string) => void;
@@ -159,6 +160,17 @@ export const useAppStore = create<AppState>()(
         set((s) => ({
           shopping: s.shopping.filter((item) => !item.checked),
         })),
+
+      setAllShoppingChecked: (checked) =>
+        set((s) => {
+          if (s.shopping.length === 0) return s;
+          if (s.shopping.every((item) => item.checked === checked)) return s;
+          return {
+            shopping: s.shopping.map((item) =>
+              item.checked === checked ? item : { ...item, checked },
+            ),
+          };
+        }),
 
       setMealPlan: (plannedMeals, recipes, summary) =>
         set((s) => ({

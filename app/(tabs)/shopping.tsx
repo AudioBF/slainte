@@ -26,6 +26,7 @@ export default function ShoppingScreen() {
   const addShoppingItem = useAppStore((s) => s.addShoppingItem);
   const removeShoppingItem = useAppStore((s) => s.removeShoppingItem);
   const clearCheckedShopping = useAppStore((s) => s.clearCheckedShopping);
+  const setAllShoppingChecked = useAppStore((s) => s.setAllShoppingChecked);
   const { generate, loading: generating, error } = useShoppingListGenerator();
 
   const [showAdd, setShowAdd] = useState(false);
@@ -33,6 +34,9 @@ export default function ShoppingScreen() {
   const [newQty, setNewQty] = useState('');
 
   const checked = shopping.filter((i) => i.checked).length;
+  const hasItems = shopping.length > 0;
+  const allChecked = hasItems && checked === shopping.length;
+  const anyChecked = checked > 0;
   const hasPlan = plannedMeals.length > 0;
 
   function handleToggle(id: string) {
@@ -54,6 +58,16 @@ export default function ShoppingScreen() {
     setShowAdd(false);
   }
 
+  function handleMarkAll() {
+    hapticLight();
+    setAllShoppingChecked(true);
+  }
+
+  function handleUnmarkAll() {
+    hapticLight();
+    setAllShoppingChecked(false);
+  }
+
   return (
     <Screen>
       <ScreenHeader title="Compras" subtitle="Lista gerada do seu cardápio" />
@@ -72,7 +86,25 @@ export default function ShoppingScreen() {
             style={styles.genBtn}
             disabled={generating || !hasPlan}
           />
-          {checked > 0 ? (
+          {hasItems ? (
+            <>
+              <Button
+                label="Marcar todos"
+                onPress={handleMarkAll}
+                variant="outline"
+                style={styles.genBtn}
+                disabled={allChecked}
+              />
+              <Button
+                label="Desmarcar todos"
+                onPress={handleUnmarkAll}
+                variant="outline"
+                style={styles.genBtn}
+                disabled={!anyChecked}
+              />
+            </>
+          ) : null}
+          {anyChecked ? (
             <Button
               label="Limpar marcados"
               onPress={clearCheckedShopping}
