@@ -165,7 +165,8 @@ Three-step flow: **Foto → Análise → Revisar**
 2. Camera or gallery → `expo-image-picker` (base64).
 3. `useMealAnalysis` → `analyze-meal` Supabase Edge Function → Gemini vision → `photoDraft` in store.
 4. User edits components/weights; macros recalculate via `applyComponentPatch`.
-5. **Registrar no dia** → `confirmPhotoMeal` → navigates to Hoje (resets `selectedHistoryDate` to today).
+5. **Revisar:** sticky `PrimaryActionBar` (**Registrar no dia**); documented `REVIEW_FOOTER_SPACE` scroll clearance; iOS `KeyboardAvoidingView` when editing.
+6. **Registrar no dia** → `confirmPhotoMeal` → navigates to Hoje (resets `selectedHistoryDate` to today).
 
 Can be deep-linked from Dieta with `?slot=&name=&plannedId=`.
 
@@ -511,11 +512,20 @@ Docs: `docs/private/SHOPPING_3B_KEYWORDS_*`
 
 Docs: `docs/private/SPRINT_2D_PLAN_VS_ACTUAL_*`
 
+**Meal review sticky footer polish** ✅
+
+| Delivered | Notes |
+|---|---|
+| Documented Revisar footer spacing | `REVIEW_FOOTER_SPACE` replaces magic `88 + 64` in `meal.tsx` |
+| iOS keyboard avoidance | `KeyboardAvoidingView` on Revisar only; Android/web unchanged |
+| No business logic change | `confirmPhotoMeal`, `photoDraft`, component editing unchanged |
+
+Docs: `docs/private/MEAL_REVIEW_STICKY_FOOTER_POLISH_*`
+
 ### Known backlog (next work)
 
 | Item | Description |
 |---|---|
-| **Meal review polish** | Sticky footer on meal review screen — **recommended next sprint** |
 | **Meal plan Edge Function** | Still behind `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` due to Gemini quota; enable only when quota stable |
 
 **Optional follow-up (not immediate):**
@@ -543,6 +553,7 @@ Docs: `docs/private/SPRINT_2D_PLAN_VS_ACTUAL_*`
 - Shopping 3C Checked Items UX (view-only partition; restantes headers)
 - Shopping 3B Keyword dictionary (priority passes + safety polish)
 - Sprint 2D Plano × Real (Seg→hoje week comparison)
+- Meal review sticky footer polish (Revisar spacing + iOS keyboard)
 - Cloud sync merge (prevent empty cloud wipe)
 - Web layout centering + Android safe area
 - Dieta clean UX (generator first, day picker modal, recipe on meal tap)
@@ -575,11 +586,11 @@ Prioritized roadmap (product + technical):
 
 ### Tier 1 — Near term
 
-1. **Meal review sticky footer** polish.
-2. **Meal plan Edge rollout** — enable when Gemini quota allows; remove client key rollback.
-3. **Toast + haptic feedback** — register meal, generate plan, sync complete.
-4. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
-5. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
+1. **Meal plan Edge rollout** — enable when Gemini quota allows; remove client key rollback.
+2. **Toast + haptic feedback** — register meal, generate plan, sync complete.
+3. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
+4. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
+5. **TDEE-based onboarding** — calculator in onboarding/profile (see Tier 2 if deferred).
 
 **Optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week (not immediate priority).
 

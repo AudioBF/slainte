@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -38,6 +40,14 @@ const SLOT_OPTIONS = MEAL_SLOTS.map((s) => ({
   value: s,
   label: SLOT_SHORT[s],
 }));
+
+/** PrimaryActionBar body above tab bar (padding + button); safe-area inset is on the bar itself. */
+const REVIEW_PRIMARY_ACTION_HEIGHT = spacing.md + 44 + spacing.md;
+/** Matches PrimaryActionBar aboveTabBar offset. */
+const TAB_BAR_OFFSET = 64;
+/** Scroll clearance: action bar + tab bar + small buffer (matches prior 88 + 64). */
+const REVIEW_FOOTER_SPACE =
+  REVIEW_PRIMARY_ACTION_HEIGHT + TAB_BAR_OFFSET + spacing.xl;
 
 export default function MealScreen() {
   const router = useRouter();
@@ -149,9 +159,17 @@ export default function MealScreen() {
     router.replace('/(tabs)');
   }
 
+  const isReviewStep = !!photoDraft;
+  const keyboardAvoidingEnabled = isReviewStep && Platform.OS === 'ios';
+
   return (
-    <View style={styles.root}>
-      <Screen footerSpace={photoDraft ? 88 + 64 : 0}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={keyboardAvoidingEnabled ? 'padding' : undefined}
+      enabled={keyboardAvoidingEnabled}
+      keyboardVerticalOffset={keyboardAvoidingEnabled ? TAB_BAR_OFFSET : 0}
+    >
+      <Screen footerSpace={isReviewStep ? REVIEW_FOOTER_SPACE : 0}>
         <ScreenHeader
           title="Refeição"
           subtitle="Fotografe o prato — a IA estima calorias e macros"
@@ -292,7 +310,7 @@ export default function MealScreen() {
       {photoDraft ? (
         <PrimaryActionBar label="Registrar no dia" onPress={handleConfirm} aboveTabBar />
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
