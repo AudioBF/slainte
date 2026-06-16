@@ -63,6 +63,7 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'laranja',
     'manga',
     'kiwi',
+    'aipo',
   ],
   proteinas: [
     'frango',
@@ -152,14 +153,23 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'mel',
     'acucar',
     'sugar',
+    'sementes de chia',
+    'chia seeds',
+    'chia',
   ],
   temperos: [
+    'caldo de legumes',
+    'caldo de galinha',
+    'caldo de carne',
+    'cubo de caldo',
     'sal grosso',
     'sal marinho',
     'pimenta',
     'cominho',
     'oregano',
+    'paprica defumada',
     'paprika',
+    'paprica',
     'curry',
     'molho de soja',
     'soy sauce',
@@ -168,8 +178,17 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'especiaria',
     'spice',
     'manjericao',
+    'salsinha fresca',
+    'salsinha',
+    'parsley',
+    'alecrim fresco',
+    'alecrim',
+    'rosemary',
+    'dill fresco',
+    'dill',
     'caldo',
     'stock',
+    'broth',
     'mostarda',
     'mustard',
     'ketchup',
@@ -193,14 +212,37 @@ function matchesKeyword(normalizedName: string, keyword: string): boolean {
   return normalizedName.includes(normalizedKeyword);
 }
 
+/** Pantry/broth terms win over produce keywords like "legumes" in "caldo de legumes". */
+const TEMPEROS_PRIORITY_KEYWORDS = [
+  'caldo de legumes',
+  'caldo de galinha',
+  'caldo de carne',
+  'cubo de caldo',
+  'caldo',
+  'stock',
+  'broth',
+];
+
+function matchesSectionKeywords(
+  normalizedName: string,
+  keywords: string[],
+): boolean {
+  const sorted = [...keywords].sort((a, b) => b.length - a.length);
+  return sorted.some((keyword) => matchesKeyword(normalizedName, keyword));
+}
+
 /** First matching section wins; default outros. */
 export function inferShoppingSection(name: string): ShoppingSectionId {
   const normalized = normalizeForMatch(name);
 
+  if (matchesSectionKeywords(normalized, TEMPEROS_PRIORITY_KEYWORDS)) {
+    return 'temperos';
+  }
+
   for (const section of SHOPPING_SECTIONS) {
     if (section.id === 'outros') continue;
     const keywords = SECTION_KEYWORDS[section.id];
-    if (keywords.some((keyword) => matchesKeyword(normalized, keyword))) {
+    if (matchesSectionKeywords(normalized, keywords)) {
       return section.id;
     }
   }

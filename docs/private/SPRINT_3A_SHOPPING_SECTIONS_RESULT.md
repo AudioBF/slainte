@@ -42,6 +42,23 @@ Empty sections are hidden. Headers: `Hortifruti · 3`.
 - Unmatched → `outros`  
 - Section computed at **render time** — `ShoppingItem` shape unchanged  
 
+### Keyword tuning (post-screenshot fixes)
+
+| Item | Was | Now | Fix |
+|---|---|---|---|
+| Caldo de legumes | Hortifruti (`legume` in "legumes") | Temperos | Priority pass for `caldo` / `stock` / `broth` before section loop |
+| Páprica defumada / paprica / paprika | Outros or wrong | Temperos | Added `paprica defumada`, `paprica`, `paprika` |
+| Dill fresco / dill | Outros | Temperos | Added `dill fresco`, `dill` |
+| Salsinha fresca / salsinha / parsley | Outros | Temperos | Added `salsinha fresca`, `salsinha`, `parsley` |
+| Alecrim fresco / alecrim / rosemary | Outros | Temperos | Added `alecrim fresco`, `alecrim`, `rosemary` |
+| Aipo / celery | Hortifruti (celery only) | Hortifruti | Added `aipo` (celery already present) |
+| Sementes de chia / chia / chia seeds | Outros | Mercearia | Added `sementes de chia`, `chia seeds`, `chia` |
+
+**Implementation notes:**
+
+- `TEMPEROS_PRIORITY_KEYWORDS` runs before the main section loop so broth/stock items are not misclassified by produce tokens (e.g. `legume` ⊂ `legumes`).
+- Within each section, keywords are sorted longest-first so multi-word phrases (e.g. `sementes de chia`) match before shorter tokens (`chia`).
+
 ---
 
 ## Manual test checklist
@@ -66,7 +83,7 @@ Empty sections are hidden. Headers: `Hortifruti · 3`.
 
 ## Known limitations
 
-1. **Keyword false positives/negatives** — e.g. short tokens, bilingual AI names; tune dictionary in 3B.  
+1. **Keyword false positives/negatives** — short tokens and bilingual AI names may still misclassify; expand dictionary as real lists appear.  
 2. **No manual section override** — always inferred from name.  
 3. **Checked items stay in place** — no collapse or move-to-bottom.  
 4. **Congelados late in order** — e.g. "brócolis congelado" may match Hortifruti before Congelados.  
