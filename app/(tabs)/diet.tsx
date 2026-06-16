@@ -17,7 +17,7 @@ import { useMealPlanGenerator } from '../../src/features/diet';
 import { hapticSuccess } from '../../src/lib/haptics';
 import type { ProfileGoal } from '../../src/features/profile';
 import { useToast } from '../../src/components/ToastProvider';
-import { isPlannedMealLoggedToday } from '../../src/store/selectors';
+import { isPlannedMealLoggedToday, todayDayIndex } from '../../src/store/selectors';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/tokens';
@@ -55,6 +55,7 @@ export default function DietScreen() {
 
   const hasPlan = plannedMeals.length > 0;
   const dayMeals = plannedMeals.filter((m) => m.dayIndex === selectedDietDay);
+  const canRegisterToday = selectedDietDay === todayDayIndex();
 
   async function handleGenerate() {
     await generate(restrictions);
@@ -146,6 +147,11 @@ export default function DietScreen() {
               onChange={setSelectedDietDay}
               mealCount={dayMeals.length}
             />
+            {!canRegisterToday ? (
+              <Text style={styles.registerHint}>
+                Registro disponível apenas para o dia de hoje.
+              </Text>
+            ) : null}
           </Card>
 
           {dayMeals.length === 0 ? (
@@ -193,7 +199,7 @@ export default function DietScreen() {
                       onPress={() => handleRegisterPlannedMeal(meal)}
                       variant="outline"
                       style={styles.mealBtn}
-                      disabled={logged}
+                      disabled={logged || !canRegisterToday}
                     />
                     <Button
                       label="Fotografar"
@@ -209,6 +215,7 @@ export default function DietScreen() {
                       }
                       variant="secondary"
                       style={styles.mealBtn}
+                      disabled={!canRegisterToday}
                     />
                   </View>
                 </Card>
@@ -273,6 +280,11 @@ const styles = StyleSheet.create({
   mealBtn: {
     flex: 1,
     paddingVertical: 10,
+  },
+  registerHint: {
+    ...typography.caption,
+    color: colors.sage,
+    marginTop: spacing.sm,
   },
   disclaimer: {
     backgroundColor: colors.cream,

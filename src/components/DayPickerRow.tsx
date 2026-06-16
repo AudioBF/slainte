@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { radius, spacing } from '../theme/tokens';
 import { typography } from '../theme/typography';
+import { todayDayIndex } from '../store/selectors';
 import { ListRow } from './ListRow';
 
 export const WEEKDAY_LABELS = [
@@ -23,6 +24,11 @@ type Props = {
   mealCount?: number;
 };
 
+function dayLabel(index: number): string {
+  const label = WEEKDAY_LABELS[index];
+  return index === todayDayIndex() ? `${label} (Hoje)` : label;
+}
+
 export function DayPickerRow({ value, onChange, mealCount }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -30,7 +36,7 @@ export function DayPickerRow({ value, onChange, mealCount }: Props) {
     <>
       <ListRow
         title="Dia da semana"
-        subtitle={WEEKDAY_LABELS[value]}
+        subtitle={dayLabel(value)}
         trailing={mealCount !== undefined ? `${mealCount} refeições` : undefined}
         onPress={() => setOpen(true)}
       />
@@ -53,7 +59,7 @@ export function DayPickerRow({ value, onChange, mealCount }: Props) {
                   accessibilityState={{ selected }}
                 >
                   <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                    {label}
+                    {dayLabel(index)}
                   </Text>
                   {selected ? <Text style={styles.check}>✓</Text> : null}
                 </Pressable>

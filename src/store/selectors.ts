@@ -33,6 +33,10 @@ export function isoToDayIndex(iso: string): number {
   return day === 0 ? 6 : day - 1;
 }
 
+export function todayDayIndex(): number {
+  return isoToDayIndex(todayISO());
+}
+
 /** Monday of the calendar week containing `iso`. */
 export function startOfWeekMonday(iso: string): string {
   return offsetDate(iso, -isoToDayIndex(iso));

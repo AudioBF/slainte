@@ -20,6 +20,7 @@ import {
   selectTodayActual,
   selectTodayPlanned,
   selectWeekComparison,
+  todayDayIndex,
   todayISO,
 } from './selectors';
 
@@ -102,7 +103,7 @@ export const useAppStore = create<AppState>()(
       recipes: [],
       markets: mockMarkets,
       photoDraft: null,
-      selectedDietDay: 0,
+      selectedDietDay: todayDayIndex(),
       viewMode: 'today',
       mealPlanSummary: null,
       selectedHistoryDate: todayISO(),
@@ -163,7 +164,7 @@ export const useAppStore = create<AppState>()(
         set((s) => ({
           plannedMeals,
           recipes,
-          selectedDietDay: 0,
+          selectedDietDay: todayDayIndex(),
           mealPlanSummary: summary ?? null,
           profile: { ...s.profile, updatedAt: new Date().toISOString() },
         })),
@@ -224,6 +225,9 @@ export const useAppStore = create<AppState>()(
       },
 
       logPlannedMeal: (meal) => {
+        if (meal.dayIndex !== todayDayIndex()) {
+          return false;
+        }
         const { loggedMeals } = get();
         const today = todayISO();
         if (loggedMeals.some((m) => m.date === today && m.plannedMealId === meal.id)) {

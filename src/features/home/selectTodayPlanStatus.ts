@@ -1,5 +1,5 @@
 import { SLOT_ORDER } from '../../constants/meals';
-import { isPlannedMealLoggedToday } from '../../store/selectors';
+import { isPlannedMealLoggedToday, todayDayIndex } from '../../store/selectors';
 import type { LoggedMeal, PlannedMeal } from '../../types';
 
 export type TodayPlanStatus = {
@@ -10,11 +10,6 @@ export type TodayPlanStatus = {
   nextUnlogged: PlannedMeal | null;
   allLogged: boolean;
 };
-
-function todayDayIndex(): number {
-  const day = new Date().getDay();
-  return day === 0 ? 6 : day - 1;
-}
 
 /** Today's planned meals vs logged status. Null when no plan or no meals for today. */
 export function selectTodayPlanStatus(

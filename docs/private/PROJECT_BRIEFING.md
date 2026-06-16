@@ -174,8 +174,9 @@ Can be deep-linked from Dieta with `?slot=&name=&plannedId=`.
 
 - **Before plan exists:** generator only (goal, restrictions, “Gerar cardápio da semana”).
 - **After plan exists:** summary card, day picker (`DayPickerRow` modal), meal cards per day.
+- Day picker defaults to **today** (`todayDayIndex()`); today’s row shows **(Hoje)**.
 - Tap meal → recipe modal if `recipeId` or name match exists.
-- **Registrar** / **Fotografar** per planned meal.
+- **Registrar** / **Fotografar** per planned meal — **only when selected day is today**; other days are view-only (recipe still tappable).
 
 ### Tab: Compras (`app/(tabs)/shopping.tsx`)
 
@@ -224,7 +225,7 @@ Persist version: `APP.storageVersion` (= 2) with migrate logic in store config.
 | Field | Description |
 |---|---|
 | `photoDraft` | In-progress meal analysis components |
-| `selectedDietDay` | 0–6 (Mon–Sun) for Dieta tab |
+| `selectedDietDay` | 0–6 (Mon–Sun) for Dieta tab; defaults to calendar today (ephemeral) |
 | `viewMode` | `'today' \| 'week'` on Hoje |
 | `markets` | Static supermarket list |
 | `lastSyncedAt` | Last successful Supabase sync timestamp |
@@ -234,8 +235,8 @@ Persist version: `APP.storageVersion` (= 2) with migrate logic in store config.
 | Action | Effect |
 |---|---|
 | `confirmPhotoMeal` | Appends to `loggedMeals`, clears `photoDraft`, sets date to today |
-| `logPlannedMeal` | Logs planned meal as today's logged meal |
-| `setMealPlan` | Replaces plan + recipes; resets `selectedDietDay` |
+| `logPlannedMeal` | Logs planned meal as today's logged meal (rejects if `meal.dayIndex` ≠ today) |
+| `setMealPlan` | Replaces plan + recipes; resets `selectedDietDay` to today |
 | `setShopping` | Replaces shopping list |
 | `replacePersistedState` | Full replace (used by cloud sync pull) |
 | `completeOnboarding` | Sets profile + clears meals/plan (fresh start) |
@@ -246,7 +247,7 @@ Persist version: `APP.storageVersion` (= 2) with migrate logic in store config.
 
 ### Selectors (`src/store/selectors.ts`)
 
-Pure functions for derived data: `selectMealsForDate`, `selectTodayActual`, `selectWeekCalorieTrend`, `todayISO()`, etc. Prefer selectors over duplicating filter logic in screens.
+Pure functions for derived data: `selectMealsForDate`, `selectTodayActual`, `selectWeekCalorieTrend`, `todayISO()`, `todayDayIndex()`, `isoToDayIndex()`, etc. Prefer selectors over duplicating filter logic in screens.
 
 ---
 
@@ -532,6 +533,16 @@ Docs: `docs/private/MEAL_REVIEW_STICKY_FOOTER_POLISH_*`
 
 Docs: `docs/private/TOAST_HAPTICS_*`
 
+**Diet day alignment** ✅
+
+| Delivered | Notes |
+|---|---|
+| Default to today | `selectedDietDay` initial + `setMealPlan` reset use `todayDayIndex()` |
+| “Hoje” label | `DayPickerRow` shows e.g. `Terça-feira (Hoje)` |
+| Registration guard | `logPlannedMeal` rejects non-today `dayIndex`; Dieta disables Registrar/Fotografar off-today |
+
+Docs: `docs/private/DIET_DAY_ALIGNMENT_*`
+
 ### Known backlog (next work)
 
 | Item | Description |
@@ -564,6 +575,7 @@ Docs: `docs/private/TOAST_HAPTICS_*`
 - Sprint 2D Plano × Real (Seg→hoje week comparison)
 - Meal review sticky footer polish (Revisar spacing + iOS keyboard)
 - Toast + haptic feedback v1 (global ToastProvider, success-only actions)
+- Diet day alignment (Dieta opens on today; non-today registration blocked)
 - Cloud sync merge (prevent empty cloud wipe)
 - Web layout centering + Android safe area
 - Dieta clean UX (generator first, day picker modal, recipe on meal tap)
@@ -584,6 +596,7 @@ Docs: `docs/private/TOAST_HAPTICS_*`
 | PWA stale cache after deploy | Medium | Users may need hard refresh / re-install shortcut |
 | Avatar broken if invalid `avatarUri` | Low | Fixed with `onError` fallback — verify on device |
 | Viewing “Ontem” hides new meals | Low | Fixed: confirm resets to today; banner if viewing past date |
+| Dieta/Home day mismatch | Medium | Fixed: Dieta defaults to today; non-today Registrar blocked |
 | Expo Go cannot run project | Info | SDK 56 — use `npm run web` or EAS dev client |
 
 Report new bugs with: platform (web PWA / Android / iOS), steps, screenshot, and whether Supabase login is active.
