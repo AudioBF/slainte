@@ -176,7 +176,7 @@ Can be deep-linked from Dieta with `?slot=&name=&plannedId=`.
 - **After plan exists:** summary card, day picker (`DayPickerRow` modal), meal cards per day.
 - Day picker defaults to **today** (`todayDayIndex()`); today’s row shows **(Hoje)**.
 - Tap meal → recipe modal if `recipeId` or name match exists.
-- **Registrar** / **Fotografar** per planned meal — **only when selected day is today**; other days are view-only (recipe still tappable).
+- **Registrar** / **Fotografar** per planned meal — **only when selected day is today** and meal **not yet logged**; other days are view-only (recipe still tappable after register).
 
 ### Tab: Compras (`app/(tabs)/shopping.tsx`)
 
@@ -234,7 +234,7 @@ Persist version: `APP.storageVersion` (= 2) with migrate logic in store config.
 
 | Action | Effect |
 |---|---|
-| `confirmPhotoMeal` | Appends to `loggedMeals`, clears `photoDraft`, sets date to today |
+| `confirmPhotoMeal` | Appends to `loggedMeals`, clears `photoDraft`, sets date to today; skips duplicate `plannedMealId` for today |
 | `logPlannedMeal` | Logs planned meal as today's logged meal (rejects if `meal.dayIndex` ≠ today) |
 | `setMealPlan` | Replaces plan + recipes; resets `selectedDietDay` to today |
 | `setShopping` | Replaces shopping list |
@@ -544,24 +544,39 @@ Docs: `docs/private/TOAST_HAPTICS_*`
 
 Docs: `docs/private/DIET_DAY_ALIGNMENT_*`
 
-**Follow-up (optional):** Disable **Fotografar** for already-registered today planned meals if duplicate logging via photo flow becomes a real issue.
+**Diet planned photo dedup** ✅
+
+| Delivered | Notes |
+|---|---|
+| Fotografar gated | Disabled when planned meal already logged today (`logged \|\| !canRegisterToday`) |
+| Store integrity | `confirmPhotoMeal` rejects duplicate `plannedMealId` for `todayISO()` |
+| Recipe preserved | Post-register recipe tap unchanged |
+
+Docs: `docs/private/DIET_PLANNED_PHOTO_DEDUP_*`
 
 ### Known backlog (next work)
 
 | Item | Description |
 |---|---|
+| **Shopping 3D bulk actions** ⭐ | **Next recommended** — Marcar todos / Desmarcar todos; multi-select, bulk check/remove |
 | **Meal plan Edge rollout** | Enable when Gemini quota is stable; remove client key rollback |
 | **Design system v2** | Tokens, Card/Button variants, tighter hierarchy, basic Reanimated |
 | **TDEE onboarding** | Calculator in onboarding/profile |
-| **Shopping 3D bulk actions** | Multi-select / bulk check / bulk remove on shopping list |
 
-**Optional follow-up (not immediate):**
+**UX / design polish (optional):**
+
+| Item | Description |
+|---|---|
+| **Disabled Fotografar styling** | Stronger muted/disabled visual when meal already registered |
+| **Histórico kcal labels** | Suffix `kcal` on weekly history day totals (Hoje, Ontem, …) |
+| **Plano × Real percentages** | Show % of plan beside Real values in week comparison |
+
+**Other optional follow-up:**
 
 | Item | Description |
 |---|---|
 | **Shopping 3C+** | Collapsible per-section **Comprados** if real shopping tests still feel noisy |
 | **Sprint 2D+** | Align TrendChart / Histórico to calendar week (or add copy) — Plano × Real already Seg→hoje |
-| **Diet Fotografar dedup** | Disable photo CTA when today planned meal already registered |
 
 ### Other planned (not started)
 
@@ -583,6 +598,7 @@ Docs: `docs/private/DIET_DAY_ALIGNMENT_*`
 - Meal review sticky footer polish (Revisar spacing + iOS keyboard)
 - Toast + haptic feedback v1 (global ToastProvider, success-only actions)
 - Diet day alignment (Dieta opens on today; non-today registration blocked)
+- Diet planned photo dedup (Fotografar disabled when logged; store duplicate guard)
 - Cloud sync merge (prevent empty cloud wipe)
 - Web layout centering + Android safe area
 - Dieta clean UX (generator first, day picker modal, recipe on meal tap)
@@ -616,13 +632,15 @@ Prioritized roadmap (product + technical):
 
 ### Tier 1 — Near term
 
-1. **Meal plan Edge rollout** — enable when Gemini quota is stable; remove client key rollback.
-2. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
-3. **TDEE-based onboarding** — calculator in onboarding/profile.
-4. **Shopping 3D bulk actions** — multi-select, bulk check, bulk remove on shopping list.
+1. **Shopping 3D bulk actions** ⭐ — Marcar todos / Desmarcar todos; multi-select, bulk check, bulk remove (**next recommended implementation**).
+2. **Meal plan Edge rollout** — enable when Gemini quota is stable; remove client key rollback.
+3. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
+4. **TDEE-based onboarding** — calculator in onboarding/profile.
 5. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
 
-**Optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week; **Diet Fotografar dedup** — disable photo CTA when today planned meal already registered.
+**UX polish (optional):** disabled **Fotografar** styling; **kcal** suffix on Histórico week totals; **%** labels on Plano × Real.
+
+**Other optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week.
 
 ### Tier 2 — Medium term
 
