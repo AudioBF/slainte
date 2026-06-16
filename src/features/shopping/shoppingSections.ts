@@ -256,6 +256,23 @@ export type ShoppingSectionGroup = {
   items: ShoppingItem[];
 };
 
+/** Stable order within each group; input order preserved. */
+export function partitionShoppingByChecked(items: ShoppingItem[]): {
+  unchecked: ShoppingItem[];
+  checked: ShoppingItem[];
+} {
+  const unchecked: ShoppingItem[] = [];
+  const checked: ShoppingItem[] = [];
+  for (const item of items) {
+    if (item.checked) {
+      checked.push(item);
+    } else {
+      unchecked.push(item);
+    }
+  }
+  return { unchecked, checked };
+}
+
 /** Groups items by section; preserves original order within each section. Empty sections omitted. */
 export function groupShoppingBySection(items: ShoppingItem[]): ShoppingSectionGroup[] {
   const buckets = new Map<ShoppingSectionId, ShoppingItem[]>();

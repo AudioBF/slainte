@@ -105,7 +105,7 @@ slainte/
 │   │   ├── diet/             # useMealPlanGenerator
 │   │   ├── meal/             # useMealAnalysis
 │   │   ├── profile/          # Profile types & defaults
-│   │   └── shopping/         # useShoppingListGenerator
+│   │   └── shopping/         # useShoppingListGenerator, shoppingSections, ShoppingSectionList
 │   ├── hooks/                # Shared hooks (e.g. useRotatingMessage)
 │   ├── lib/                  # env, id, macros, haptics
 │   ├── services/
@@ -153,9 +153,9 @@ Root Stack
 
 - Greeting header with avatar → profile.
 - Segmented control: **Hoje** vs **Semana**.
-- **Hoje:** date navigator, calorie ring, macro bars, meal list for selected date.
-- **Semana:** trend chart, planned vs actual comparison, week history.
-- FAB “Fotografar refeição” only when today has **zero** meals (otherwise use **+ Nova**).
+- **Hoje:** date navigator, calorie ring, macro bars, **InsightCard** (primary daily insight), **TodayPlanSection** (next planned meal + one-tap register), meal list for selected date.
+- **Semana:** trend chart, **WeekDiagnosisCard** (weekly diagnosis), planned vs actual comparison, week history.
+- FAB “Fotografar refeição” only when today has **zero** meals and InsightCard is not already showing the photo CTA (dedup polish; otherwise use **+ Nova**).
 
 ### Tab: Refeição (`app/(tabs)/meal.tsx`)
 
@@ -179,6 +179,8 @@ Can be deep-linked from Dieta with `?slot=&name=&plannedId=`.
 ### Tab: Compras (`app/(tabs)/shopping.tsx`)
 
 - Progress bar for checked items.
+- List grouped by **supermarket section** (Hortifruti, Proteínas, Laticínios, Mercearia, Temperos, Congelados, Outros) via local keyword inference at render time — `ShoppingItem` shape unchanged.
+- Checked items render at the **bottom of each section** (view-only partition); section headers show **restantes** when the section has checked items.
 - **Do cardápio** → AI shopping list from `plannedMeals` (requires existing plan).
 - Manual add/remove; collapsible add form.
 
@@ -424,7 +426,7 @@ Default: `EXPO_PUBLIC_AI_MOCK=true`. Set to `false` for real AI. Edge AI require
 | **Offline AI** | Requires network for real analysis/generation |
 | **Meal plan** | No drag-and-drop; no per-day regeneration |
 | **Recipes** | No standalone “Chef IA”; recipes only from plan generation |
-| **Shopping** | No aisle grouping, quantity aggregation, or “market mode” |
+| **Shopping** | Section grouping (3A) and checked-item partition (3C) done; no quantity aggregation, collapsible “Comprados”, or “market mode” yet |
 | **Profile** | No weight/height/age/TDEE calculator |
 | **Auth** | Email/password only |
 | **Native** | Expo Go incompatible with SDK 56; use web PWA or dev client |
@@ -451,27 +453,79 @@ Default: `EXPO_PUBLIC_AI_MOCK=true`. Set to `false` for real AI. Edge AI require
 
 ---
 
-## 12. Features in progress
+## 12. Sprint status & backlog
 
-These are planned or partially done — check git `master` and recent commits before assuming status.
+Check git `master` and recent commits before assuming status.
+
+### Completed
+
+**Sprint 2 — Smart Home** ✅
+
+| Slice | Delivered |
+|---|---|
+| **2A InsightCard** | Primary daily insight on Hoje (on-track, over goal, empty day, etc.) |
+| **2B TodayPlanSection** | Next planned meal for today + one-tap register |
+| **2C WeekDiagnosisCard** | Weekly diagnosis on Semana tab |
+| **2P Home dedup polish** | Hide FAB when InsightCard shows photo CTA; skip redundant plan-pending insight |
+
+Docs: `docs/private/SPRINT_2_*`
+
+**Sprint 3A — Shopping Sections** ✅
+
+| Delivered | Notes |
+|---|---|
+| Shopping list grouped by supermarket sections | Hortifruti → … → Outros; empty sections hidden |
+| Local keyword inference | PT-BR + EN substring rules; section computed at render time |
+| No persisted data shape change | `ShoppingItem` and Zustand store unchanged; no AI / Edge changes for grouping |
+
+Docs: `docs/private/SPRINT_3A_SHOPPING_SECTIONS_*`
+
+**Shopping 3C — Checked Items UX** ✅
+
+| Delivered | Notes |
+|---|---|
+| Checked items at bottom of each section | View-only `partitionShoppingByChecked()`; store array order unchanged |
+| Section header remaining count | `{label} · {n} restantes` when section has checked items |
+| No persisted data shape change | `ShoppingItem`, Zustand store, persistence, AI, and Edge paths unchanged |
+
+Docs: `docs/private/SHOPPING_3C_CHECKED_ITEMS_*`
+
+### Known backlog (next work)
+
+| Item | Description |
+|---|---|
+| **Shopping 3B** | Expand keyword dictionary from real generated lists |
+| **Sprint 2D** | Align **Plano × Real** comparison by calendar day (week view) |
+| **Meal review polish** | Sticky footer on meal review screen |
+| **Meal plan Edge Function** | Still behind `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` due to Gemini quota; client rollback path remains |
+
+**Optional follow-up (not immediate):**
+
+| Item | Description |
+|---|---|
+| **Shopping 3C+** | Collapsible per-section **Comprados** if real shopping tests still feel noisy |
+
+### Other planned (not started)
 
 | Feature | Status |
 |---|---|
 | Design system v2 (tokens, Card variants, motion) | Planned (Sprint 4) |
 | Toast / action feedback | Planned |
-| Edge Functions for Gemini | In progress — `analyze-meal` and `generate-shopping-list` deployed; `generate-meal-plan` implemented behind feature flag |
 | Chef IA (standalone recipe generator) | Planned |
-| Shopping list by supermarket section | Planned |
 | Drag-and-drop meal plan | Planned |
 | TDEE-based onboarding | Planned |
 | UI polish pass (professional tier) | In discussion |
 
 **Recently completed (reference):**
 
+- Sprint 2 Smart Home (InsightCard, TodayPlanSection, WeekDiagnosisCard, dedup polish)
+- Sprint 3A Shopping Sections (section grouping + keyword tuning)
+- Shopping 3C Checked Items UX (view-only partition; restantes headers)
 - Cloud sync merge (prevent empty cloud wipe)
 - Web layout centering + Android safe area
 - Dieta clean UX (generator first, day picker modal, recipe on meal tap)
 - AI skeleton loading, `AiBadge`, market logos
+- Edge Functions: `analyze-meal` and `generate-shopping-list` deployed with auth hardening
 - Meal plan timeout increased to 120s
 
 ---
@@ -499,11 +553,15 @@ Prioritized roadmap (product + technical):
 
 ### Tier 1 — Near term
 
-1. **Supabase Edge Functions for AI** — hide Gemini key, improve reliability.
-2. **Toast + haptic feedback** — register meal, generate plan, sync complete.
-3. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
-4. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
-5. **Shopping: group by aisle** + market mode UI.
+1. **Shopping 3B** — keyword dictionary expansion from real lists.
+2. **Sprint 2D** — Plano × Real aligned by calendar day.
+3. **Meal review sticky footer** polish.
+4. **Meal plan Edge rollout** — enable when Gemini quota allows; remove client key rollback.
+5. **Toast + haptic feedback** — register meal, generate plan, sync complete.
+6. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
+7. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
+
+**Optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados** if in-store use still feels noisy (not immediate priority).
 
 ### Tier 2 — Medium term
 

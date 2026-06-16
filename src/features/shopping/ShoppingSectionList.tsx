@@ -6,7 +6,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/tokens';
 import { typography } from '../../theme/typography';
 import type { ShoppingItem } from '../../types';
-import { groupShoppingBySection } from './shoppingSections';
+import { groupShoppingBySection, partitionShoppingByChecked } from './shoppingSections';
 
 type Props = {
   items: ShoppingItem[];
@@ -19,19 +19,25 @@ export function ShoppingSectionList({ items, onToggle, onRemove }: Props) {
 
   return (
     <Card flat>
-      {sections.map((section, sectionIndex) => (
+      {sections.map((section, sectionIndex) => {
+        const { unchecked, checked } = partitionShoppingByChecked(section.items);
+        const displayItems = [...unchecked, ...checked];
+        const headerLabel =
+          checked.length === 0
+            ? `${section.label} · ${section.items.length}`
+            : `${section.label} · ${unchecked.length} restantes`;
+
+        return (
         <View
           key={section.sectionId}
           style={sectionIndex < sections.length - 1 ? styles.sectionBlock : undefined}
         >
-          <Text style={styles.sectionHeader}>
-            {section.label} · {section.items.length}
-          </Text>
-          {section.items.map((item, itemIndex) => (
+          <Text style={styles.sectionHeader}>{headerLabel}</Text>
+          {displayItems.map((item, itemIndex) => (
             <View
               key={item.id}
               style={
-                itemIndex < section.items.length - 1 ? styles.listDivider : undefined
+                itemIndex < displayItems.length - 1 ? styles.listDivider : undefined
               }
             >
               <ShoppingListItem
@@ -45,7 +51,8 @@ export function ShoppingSectionList({ items, onToggle, onRemove }: Props) {
             </View>
           ))}
         </View>
-      ))}
+        );
+      })}
     </Card>
   );
 }
