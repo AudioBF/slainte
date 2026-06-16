@@ -5,6 +5,15 @@
 **Status:** ✅ Implemented and validated  
 **Production:** `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false` (unchanged)
 
+### Production deploy (2026-06-16)
+
+| Field | Value |
+|---|---|
+| URL | https://slainte-sigma.vercel.app |
+| Bundle | `entry-dfd5f486e4d22e2df9ea17008d253168.js` → `useEdgeMealPlan:!1` ✅ |
+| Vercel env | `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=""` (not `true`) |
+| Client smoke | `node scripts/smoke-meal-plan-client.mjs` → **ok** (21 meals, 0 recipes, ~22.7 s) |
+
 ---
 
 ## Summary
