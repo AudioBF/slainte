@@ -537,24 +537,31 @@ Docs: `docs/private/TOAST_HAPTICS_*`
 
 | Delivered | Notes |
 |---|---|
-| Default to today | `selectedDietDay` initial + `setMealPlan` reset use `todayDayIndex()` |
+| Opens on today | Dieta `selectedDietDay` defaults to `todayDayIndex()`; `setMealPlan` resets to today |
 | “Hoje” label | `DayPickerRow` shows e.g. `Terça-feira (Hoje)` |
-| Registration guard | `logPlannedMeal` rejects non-today `dayIndex`; Dieta disables Registrar/Fotografar off-today |
+| Non-today blocked | Registrar/Fotografar disabled off-today; hint *Registro disponível apenas para o dia de hoje.* |
+| Store guard | `logPlannedMeal` rejects `meal.dayIndex !== todayDayIndex()` |
 
 Docs: `docs/private/DIET_DAY_ALIGNMENT_*`
+
+**Follow-up (optional):** Disable **Fotografar** for already-registered today planned meals if duplicate logging via photo flow becomes a real issue.
 
 ### Known backlog (next work)
 
 | Item | Description |
 |---|---|
-| **Meal plan Edge Function** | Still behind `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` due to Gemini quota; enable only when quota stable |
+| **Meal plan Edge rollout** | Enable when Gemini quota is stable; remove client key rollback |
+| **Design system v2** | Tokens, Card/Button variants, tighter hierarchy, basic Reanimated |
+| **TDEE onboarding** | Calculator in onboarding/profile |
+| **Shopping 3D bulk actions** | Multi-select / bulk check / bulk remove on shopping list |
 
 **Optional follow-up (not immediate):**
 
 | Item | Description |
 |---|---|
-| **Sprint 2D+** | Align TrendChart / Histórico to calendar week (or add copy) — Plano × Real already Seg→hoje |
 | **Shopping 3C+** | Collapsible per-section **Comprados** if real shopping tests still feel noisy |
+| **Sprint 2D+** | Align TrendChart / Histórico to calendar week (or add copy) — Plano × Real already Seg→hoje |
+| **Diet Fotografar dedup** | Disable photo CTA when today planned meal already registered |
 
 ### Other planned (not started)
 
@@ -609,12 +616,13 @@ Prioritized roadmap (product + technical):
 
 ### Tier 1 — Near term
 
-1. **Meal plan Edge rollout** — enable when Gemini quota allows; remove client key rollback.
+1. **Meal plan Edge rollout** — enable when Gemini quota is stable; remove client key rollback.
 2. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
-3. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
-4. **TDEE-based onboarding** — calculator in onboarding/profile (see Tier 2 if deferred).
+3. **TDEE-based onboarding** — calculator in onboarding/profile.
+4. **Shopping 3D bulk actions** — multi-select, bulk check, bulk remove on shopping list.
+5. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
 
-**Optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week (not immediate priority).
+**Optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week; **Diet Fotografar dedup** — disable photo CTA when today planned meal already registered.
 
 ### Tier 2 — Medium term
 
