@@ -123,6 +123,8 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'peru defumado',
     'presunto',
     'camarao descascado',
+    'canned tuna',
+    'atum em lata',
   ],
   laticinios: [
     'leite',
@@ -174,8 +176,9 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'azeite',
     'oleo',
     'oil',
+    'enlatado de milho',
+    'milho enlatado',
     'enlatado',
-    'lata',
     'canned',
     'beans',
     'chickpea',
@@ -272,8 +275,6 @@ const SECTION_KEYWORDS: Record<Exclude<ShoppingSectionId, 'outros'>, string[]> =
     'congelados',
     'congeladas',
     'frozen',
-    'gelado',
-    'gelada',
   ],
 };
 
