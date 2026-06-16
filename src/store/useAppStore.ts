@@ -203,8 +203,15 @@ export const useAppStore = create<AppState>()(
         }),
 
       confirmPhotoMeal: (slot, name, options) => {
-        const { photoDraft } = get();
+        const { photoDraft, loggedMeals } = get();
         if (!photoDraft?.length) return;
+        const today = todayISO();
+        if (
+          options?.plannedMealId &&
+          loggedMeals.some((m) => m.date === today && m.plannedMealId === options.plannedMealId)
+        ) {
+          return;
+        }
         const now = new Date().toISOString();
         const meal: LoggedMeal = {
           id: createId('meal'),

@@ -215,7 +215,7 @@ export default function DietScreen() {
                       }
                       variant="secondary"
                       style={styles.mealBtn}
-                      disabled={!canRegisterToday}
+                      disabled={!canRegisterToday || logged}
                     />
                   </View>
                 </Card>
