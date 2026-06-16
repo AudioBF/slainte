@@ -11,13 +11,15 @@ import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Section, SectionAction } from '../../src/components/Section';
 import { ShoppingSectionList, useShoppingListGenerator } from '../../src/features/shopping';
 import { SHOPPING_LIST_MESSAGES } from '../../src/constants/ai-messages';
-import { hapticLight } from '../../src/lib/haptics';
+import { hapticLight, hapticSuccess } from '../../src/lib/haptics';
+import { useToast } from '../../src/components/ToastProvider';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/tokens';
 import { typography } from '../../src/theme/typography';
 
 export default function ShoppingScreen() {
+  const { showToast } = useToast();
   const shopping = useAppStore((s) => s.shopping);
   const plannedMeals = useAppStore((s) => s.plannedMeals);
   const toggleShoppingItem = useAppStore((s) => s.toggleShoppingItem);
@@ -40,6 +42,8 @@ export default function ShoppingScreen() {
 
   async function handleGenerate() {
     await generate();
+    hapticSuccess();
+    showToast('Lista de compras atualizada');
   }
 
   function handleAdd() {

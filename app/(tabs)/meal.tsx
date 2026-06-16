@@ -27,7 +27,9 @@ import { StepIndicator } from '../../src/components/StepIndicator';
 import { MEAL_ANALYSIS_MESSAGES } from '../../src/constants/ai-messages';
 import { isMealSlot, MEAL_SLOTS, SLOT_SHORT } from '../../src/constants/meals';
 import { useMealAnalysis } from '../../src/features/meal';
+import { hapticSuccess } from '../../src/lib/haptics';
 import { createId } from '../../src/lib/id';
+import { useToast } from '../../src/components/ToastProvider';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
 import { radius, spacing } from '../../src/theme/tokens';
@@ -51,6 +53,7 @@ const REVIEW_FOOTER_SPACE =
 
 export default function MealScreen() {
   const router = useRouter();
+  const { showToast } = useToast();
   const params = useLocalSearchParams<{ slot?: string; name?: string; plannedId?: string }>();
   const photoDraft = useAppStore((s) => s.photoDraft);
   const updatePhotoComponent = useAppStore((s) => s.updatePhotoComponent);
@@ -154,6 +157,8 @@ export default function MealScreen() {
       .slice(0, 2)
       .join(' + ');
     confirmPhotoMeal(slot, plannedName ?? defaultName, { plannedMealId: plannedId });
+    hapticSuccess();
+    showToast('Refeição registrada');
     setImageUri(null);
     setImageBase64(null);
     router.replace('/(tabs)');

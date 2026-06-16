@@ -14,7 +14,9 @@ import { Section } from '../../src/components/Section';
 import { StatPill } from '../../src/components/StatPill';
 import { MEAL_PLAN_MESSAGES } from '../../src/constants/ai-messages';
 import { useMealPlanGenerator } from '../../src/features/diet';
+import { hapticSuccess } from '../../src/lib/haptics';
 import type { ProfileGoal } from '../../src/features/profile';
+import { useToast } from '../../src/components/ToastProvider';
 import { isPlannedMealLoggedToday } from '../../src/store/selectors';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
@@ -37,6 +39,7 @@ const SLOT_LABELS: Record<string, string> = {
 
 export default function DietScreen() {
   const router = useRouter();
+  const { showToast } = useToast();
   const profile = useAppStore((s) => s.profile);
   const updateProfile = useAppStore((s) => s.updateProfile);
   const logPlannedMeal = useAppStore((s) => s.logPlannedMeal);
@@ -55,6 +58,15 @@ export default function DietScreen() {
 
   async function handleGenerate() {
     await generate(restrictions);
+    hapticSuccess();
+    showToast('Cardápio gerado');
+  }
+
+  function handleRegisterPlannedMeal(meal: PlannedMeal) {
+    const registered = logPlannedMeal(meal);
+    if (!registered) return;
+    hapticSuccess();
+    showToast('Refeição do plano registrada');
   }
 
   function openRecipe(meal: PlannedMeal) {
@@ -178,7 +190,7 @@ export default function DietScreen() {
                   <View style={styles.mealActions}>
                     <Button
                       label={logged ? 'Registrado ✓' : 'Registrar'}
-                      onPress={() => logPlannedMeal(meal)}
+                      onPress={() => handleRegisterPlannedMeal(meal)}
                       variant="outline"
                       style={styles.mealBtn}
                       disabled={logged}

@@ -522,6 +522,16 @@ Docs: `docs/private/SPRINT_2D_PLAN_VS_ACTUAL_*`
 
 Docs: `docs/private/MEAL_REVIEW_STICKY_FOOTER_POLISH_*`
 
+**Toast + haptic feedback v1** ✅
+
+| Delivered | Notes |
+|---|---|
+| Global feedback host | `ToastProvider` wired once in `app/_layout.tsx` |
+| Success-only milestone feedback | Meal register, planned meal register, meal plan generated, shopping list generated |
+| Lightweight behavior | One toast at a time, auto-dismiss, no queue/persistence; no business logic or persisted shape changes |
+
+Docs: `docs/private/TOAST_HAPTICS_*`
+
 ### Known backlog (next work)
 
 | Item | Description |
@@ -540,7 +550,6 @@ Docs: `docs/private/MEAL_REVIEW_STICKY_FOOTER_POLISH_*`
 | Feature | Status |
 |---|---|
 | Design system v2 (tokens, Card variants, motion) | Planned (Sprint 4) |
-| Toast / action feedback | Planned |
 | Chef IA (standalone recipe generator) | Planned |
 | Drag-and-drop meal plan | Planned |
 | TDEE-based onboarding | Planned |
@@ -554,6 +563,7 @@ Docs: `docs/private/MEAL_REVIEW_STICKY_FOOTER_POLISH_*`
 - Shopping 3B Keyword dictionary (priority passes + safety polish)
 - Sprint 2D Plano × Real (Seg→hoje week comparison)
 - Meal review sticky footer polish (Revisar spacing + iOS keyboard)
+- Toast + haptic feedback v1 (global ToastProvider, success-only actions)
 - Cloud sync merge (prevent empty cloud wipe)
 - Web layout centering + Android safe area
 - Dieta clean UX (generator first, day picker modal, recipe on meal tap)
@@ -587,10 +597,9 @@ Prioritized roadmap (product + technical):
 ### Tier 1 — Near term
 
 1. **Meal plan Edge rollout** — enable when Gemini quota allows; remove client key rollback.
-2. **Toast + haptic feedback** — register meal, generate plan, sync complete.
-3. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
-4. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
-5. **TDEE-based onboarding** — calculator in onboarding/profile (see Tier 2 if deferred).
+2. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
+3. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.
+4. **TDEE-based onboarding** — calculator in onboarding/profile (see Tier 2 if deferred).
 
 **Optional follow-up:** **Shopping 3C+** — collapsible per-section **Comprados**; **Sprint 2D+** — align TrendChart/Histórico to calendar week (not immediate priority).
 

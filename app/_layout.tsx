@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { ToastProvider } from '../src/components/ToastProvider';
 import { CloudSyncProvider } from '../src/features/auth';
 
 SplashScreen.preventAutoHideAsync();
@@ -33,17 +34,19 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <CloudSyncProvider />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="account" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="privacy" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="meal-detail/[id]" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="recipe/[id]" options={{ presentation: 'modal' }} />
-        </Stack>
+        <ToastProvider>
+          <StatusBar style="dark" />
+          <CloudSyncProvider />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="account" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="privacy" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="meal-detail/[id]" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="recipe/[id]" options={{ presentation: 'modal' }} />
+          </Stack>
+        </ToastProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
