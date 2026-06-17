@@ -21,6 +21,12 @@ const SHOPPING_LIST_MODELS = [
   'gemini-2.5-flash',
 ];
 
+const RECIPE_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash-lite',
+];
+
 const MEAL_PLAN_MODELS = [
   'gemini-2.5-flash',
   'gemini-3.5-flash',
@@ -42,7 +48,7 @@ const UNAVAILABLE_RETRY_DELAY_MAX_MS = 4_000;
 const REQUEST_TIMEOUT_MS = 50_000;
 const MEAL_PLAN_TIMEOUT_MS = 120_000;
 
-type AiTask = 'vision' | 'mealPlan' | 'shoppingList';
+type AiTask = 'vision' | 'mealPlan' | 'shoppingList' | 'recipe';
 
 type GenerateStructuredJsonOptions = {
   task: AiTask;
@@ -167,6 +173,8 @@ function getModelChain(task: AiTask, useProFallback = false): string[] {
       return useProFallback ? MEAL_PLAN_PRO_MODELS : MEAL_PLAN_MODELS;
     case 'shoppingList':
       return SHOPPING_LIST_MODELS;
+    case 'recipe':
+      return RECIPE_MODELS;
   }
 }
 
@@ -185,6 +193,8 @@ function temperatureForTask(task: AiTask): number {
     case 'mealPlan':
       return 0.85;
     case 'shoppingList':
+      return 0.4;
+    case 'recipe':
       return 0.4;
   }
 }

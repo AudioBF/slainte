@@ -62,7 +62,7 @@ Copy from `.env.example`:
 
 **Security note:** AI Edge Functions read `GEMINI_API_KEY` from Supabase secrets. `EXPO_PUBLIC_GEMINI_API_KEY` remains temporarily visible in the client bundle only for meal plan rollback while Sprint 1C is validated.
 
-**Production meal plan (2026-06-16):** **Meal Plan Lightweight v1** ✅ — weekly generation returns `plannedMeals` + `summary` only (`recipes: []`). Shopping list accepts `plannedMeals` when no recipes. Edge smoke **3/3**, P95 **~33 s**, shopping **41 items**. Production stays `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false` (client Gemini). Next: **recipe on demand** sprint. See `docs/private/MEAL_PLAN_LIGHTWEIGHT_RESULT.md`.
+**Production meal plan (2026-06-16):** **Meal Plan Lightweight v1** ✅ — weekly generation returns `plannedMeals` + `summary` only (`recipes: []`). Shopping list accepts `plannedMeals` when no recipes. Edge smoke **3/3**, P95 **~33 s**, shopping **41 items**. Production stays `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false` (client Gemini). **Recipe on demand v1** ✅ — `generate-recipe` Edge + Dieta **Gerar receita** CTA. See `docs/private/MEAL_PLAN_LIGHTWEIGHT_RESULT.md`, `docs/private/MEAL_PLAN_RECIPE_ON_DEMAND_RESULT.md`.
 
 ### Useful scripts
 
@@ -571,7 +571,7 @@ Docs: `docs/private/DIET_PLANNED_PHOTO_DEDUP_*`
 
 | Item | Description |
 |---|---|
-| **Recipe on demand** ⭐ | Generate full recipe when user taps a planned meal (future `generate-recipe` Edge fn) |
+| **Recipe on demand** ⭐ | ✅ v1 — `generate-recipe` Edge + **Gerar receita** on Dieta when user wants preparation details |
 | **Design system v2** | Tokens, Card/Button variants, tighter hierarchy, basic Reanimated |
 | **TDEE onboarding** | Calculator in onboarding/profile |
 
@@ -646,7 +646,7 @@ Prioritized roadmap (product + technical):
 
 ### Tier 1 — Near term
 
-1. **Recipe on demand** ⭐ — `generate-recipe` Edge function + Dieta CTA when user wants preparation details for a planned meal.
+1. **Recipe on demand v2** — regenerate alternate recipe, optional Edge cache.
 2. **Design system v2** — Card/Button variants, tighter hierarchy, basic Reanimated.
 3. **TDEE-based onboarding** — calculator in onboarding/profile.
 4. **Prompt fix: mandatory `recipeId`** on main meals + “Lanche simples” badge.

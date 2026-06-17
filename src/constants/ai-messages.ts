@@ -18,3 +18,9 @@ export const SHOPPING_LIST_MESSAGES = [
   'Agrupando itens por supermercado irlandês…',
   'Calculando quantidades da semana…',
 ] as const;
+
+export const RECIPE_MESSAGES = [
+  'Montando ingredientes da receita…',
+  'Escrevendo passos de preparo…',
+  'Ajustando macros por porção…',
+] as const;

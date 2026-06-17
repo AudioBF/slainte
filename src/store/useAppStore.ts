@@ -86,6 +86,8 @@ type AppState = PersistedSlice & {
   removeLoggedComponent: (mealId: string, componentId: string) => void;
   addLoggedComponent: (mealId: string, component: MealComponent) => void;
   setMealPlan: (plannedMeals: PlannedMeal[], recipes: Recipe[], summary?: string) => void;
+  upsertRecipe: (recipe: Recipe) => void;
+  linkPlannedMealRecipe: (plannedMealId: string, recipeId: string) => void;
   setShopping: (items: ShoppingItem[]) => void;
   replacePersistedState: (slice: PersistedSlice) => void;
   setLastSyncedAt: (iso: string | null) => void;
@@ -179,6 +181,24 @@ export const useAppStore = create<AppState>()(
           selectedDietDay: todayDayIndex(),
           mealPlanSummary: summary ?? null,
           profile: { ...s.profile, updatedAt: new Date().toISOString() },
+        })),
+
+      upsertRecipe: (recipe) =>
+        set((s) => {
+          const index = s.recipes.findIndex((r) => r.id === recipe.id);
+          if (index >= 0) {
+            const recipes = [...s.recipes];
+            recipes[index] = recipe;
+            return { recipes };
+          }
+          return { recipes: [...s.recipes, recipe] };
+        }),
+
+      linkPlannedMealRecipe: (plannedMealId, recipeId) =>
+        set((s) => ({
+          plannedMeals: s.plannedMeals.map((meal) =>
+            meal.id === plannedMealId ? { ...meal, recipeId } : meal,
+          ),
         })),
 
       setShopping: (items) => set({ shopping: items }),

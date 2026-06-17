@@ -44,10 +44,19 @@ type GenerateMealPlanBody = {
   profile: UserProfile;
 };
 
+type GenerateRecipeBody = {
+  profile: UserProfile;
+  plannedMeal: Pick<
+    PlannedMeal,
+    'id' | 'name' | 'slot' | 'dayIndex' | 'calories' | 'protein' | 'carbs' | 'fat'
+  >;
+};
+
 type AiFunctionBodyMap = {
   'analyze-meal': AnalyzeMealBody;
   'generate-meal-plan': GenerateMealPlanBody;
   'generate-shopping-list': GenerateShoppingListBody;
+  'generate-recipe': GenerateRecipeBody;
 };
 
 export class AiEdgeError extends Error {
@@ -193,4 +202,8 @@ export function invokeGenerateShoppingList(body: GenerateShoppingListBody): Prom
 
 export function invokeGenerateMealPlan(body: GenerateMealPlanBody): Promise<unknown> {
   return invokeAiFunction('generate-meal-plan', body);
+}
+
+export function invokeGenerateRecipe(body: GenerateRecipeBody): Promise<unknown> {
+  return invokeAiFunction('generate-recipe', body);
 }

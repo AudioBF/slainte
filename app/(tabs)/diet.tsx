@@ -12,8 +12,8 @@ import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { Section } from '../../src/components/Section';
 import { StatPill } from '../../src/components/StatPill';
-import { MEAL_PLAN_MESSAGES } from '../../src/constants/ai-messages';
-import { useMealPlanGenerator } from '../../src/features/diet';
+import { MEAL_PLAN_MESSAGES, RECIPE_MESSAGES } from '../../src/constants/ai-messages';
+import { useMealPlanGenerator, useRecipeGenerator } from '../../src/features/diet';
 import { hapticSuccess } from '../../src/lib/haptics';
 import type { ProfileGoal } from '../../src/features/profile';
 import { useToast } from '../../src/components/ToastProvider';
@@ -49,6 +49,12 @@ export default function DietScreen() {
   const selectedDietDay = useAppStore((s) => s.selectedDietDay);
   const setSelectedDietDay = useAppStore((s) => s.setSelectedDietDay);
   const { generate, loading: generating, error } = useMealPlanGenerator();
+  const {
+    generateForMeal,
+    loadingMealId,
+    errorMealId,
+    error: recipeError,
+  } = useRecipeGenerator();
   const mealPlanSummary = useAppStore((s) => s.mealPlanSummary);
 
   const [restrictions, setRestrictions] = useState(profile.restrictions);
@@ -86,6 +92,17 @@ export default function DietScreen() {
   function hasRecipe(meal: PlannedMeal) {
     if (meal.recipeId) return true;
     return recipes.some((r) => r.name.trim().toLowerCase() === meal.name.trim().toLowerCase());
+  }
+
+  async function handleGenerateRecipe(meal: PlannedMeal) {
+    try {
+      const recipe = await generateForMeal(meal);
+      hapticSuccess();
+      showToast('Receita gerada');
+      router.push(`/recipe/${recipe.id}`);
+    } catch {
+      // error surfaced via recipeError
+    }
   }
 
   return (
@@ -162,6 +179,7 @@ export default function DietScreen() {
             dayMeals.map((meal) => {
               const logged = isPlannedMealLoggedToday(loggedMeals, meal.id);
               const recipeAvailable = hasRecipe(meal);
+              const generatingRecipe = loadingMealId === meal.id;
               return (
                 <Card key={meal.id}>
                   <Pressable
@@ -180,7 +198,11 @@ export default function DietScreen() {
                         <Text style={typography.subtitle}>{meal.name}</Text>
                         {recipeAvailable ? (
                           <Text style={styles.recipeHint}>Toque para ver receita e preparo ›</Text>
-                        ) : null}
+                        ) : (
+                          <Text style={styles.recipeHintMuted}>
+                            Gere a receita para ver ingredientes e preparo
+                          </Text>
+                        )}
                       </View>
                       {recipeAvailable ? <Text style={styles.chevron}>›</Text> : null}
                     </View>
@@ -193,6 +215,21 @@ export default function DietScreen() {
                     carbs={meal.carbs}
                     fat={meal.fat}
                   />
+                  {generatingRecipe ? (
+                    <AiLoadingSkeleton
+                      variant="mealPlan"
+                      messages={RECIPE_MESSAGES}
+                      active={generatingRecipe}
+                    />
+                  ) : null}
+                  {!recipeAvailable ? (
+                    <Button
+                      label={generatingRecipe ? 'Gerando receita…' : 'Gerar receita'}
+                      onPress={() => handleGenerateRecipe(meal)}
+                      disabled={generatingRecipe}
+                      style={styles.generateRecipeBtn}
+                    />
+                  ) : null}
                   <View style={styles.mealActions}>
                     <Button
                       label={logged ? 'Registrado ✓' : 'Registrar'}
@@ -218,6 +255,9 @@ export default function DietScreen() {
                       disabled={!canRegisterToday || logged}
                     />
                   </View>
+                  {recipeError && errorMealId === meal.id ? (
+                    <Text style={styles.error}>{recipeError}</Text>
+                  ) : null}
                 </Card>
               );
             })
@@ -266,6 +306,13 @@ const styles = StyleSheet.create({
     color: colors.sage,
     marginTop: spacing.xs,
   },
+  recipeHintMuted: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 12,
+    color: colors.sage,
+    marginTop: spacing.xs,
+    opacity: 0.85,
+  },
   chevron: {
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 24,
@@ -276,6 +323,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginTop: spacing.lg,
+  },
+  generateRecipeBtn: {
+    marginTop: spacing.lg,
+    paddingVertical: 10,
   },
   mealBtn: {
     flex: 1,
