@@ -62,7 +62,7 @@ Copy from `.env.example`:
 
 **Security note:** AI Edge Functions read `GEMINI_API_KEY` from Supabase secrets. `EXPO_PUBLIC_GEMINI_API_KEY` remains temporarily visible in the client bundle only for meal plan rollback while Sprint 1C is validated.
 
-**Production meal plan (2026-06-16):** **Meal Plan Lightweight v1** ✅ — weekly generation returns `plannedMeals` + `summary` only (`recipes: []`). Shopping list accepts `plannedMeals` when no recipes. Edge smoke **3/3**, P95 **~33 s**, shopping **41 items**. Production stays `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false` (client Gemini). **Recipe on demand v1** ✅ — `generate-recipe` Edge + Dieta **Gerar receita** CTA. **Polish v1** ✅ — pluralização, anti-duplo-clique, erros claros, persistência/sync. See `docs/private/MEAL_PLAN_LIGHTWEIGHT_RESULT.md`, `docs/private/MEAL_PLAN_RECIPE_ON_DEMAND_RESULT.md`, `docs/private/RECIPE_ON_DEMAND_POLISH_RESULT.md`.
+**Production meal plan (2026-06-16):** **Meal Plan Lightweight v1** ✅ — weekly generation returns `plannedMeals` + `summary` only (`recipes: []`). Shopping list accepts `plannedMeals` when no recipes. Edge smoke **3/3**, P95 **~33 s**, shopping **41 items**. Production stays `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false` (client Gemini). **Recipe on demand v1** ✅ — `generate-recipe` Edge + Dieta **Gerar receita** CTA. **Polish v1** ✅ — pluralização, anti-duplo-clique, erros claros, persistência/sync. **App stability smoke** ✅ (2026-06-17) — see `docs/private/APP_STABILITY_SMOKE_RESULT.md`. See also `docs/private/MEAL_PLAN_LIGHTWEIGHT_RESULT.md`, `docs/private/MEAL_PLAN_RECIPE_ON_DEMAND_RESULT.md`, `docs/private/RECIPE_ON_DEMAND_POLISH_RESULT.md`.
 
 ### Useful scripts
 
