@@ -36,6 +36,17 @@ export async function generateShoppingList(
 
   const { recipes, plannedMeals } = input;
 
+  if (plannedMeals.length > 0) {
+    const raw = await invokeGenerateShoppingList({
+      plannedMeals: plannedMeals.map(({ name, slot, dayIndex }) => ({
+        name,
+        slot,
+        dayIndex,
+      })),
+    });
+    return shoppingListSchema.parse(raw);
+  }
+
   if (recipes.length > 0) {
     const raw = await invokeGenerateShoppingList({
       recipes: recipes.map(({ name, servings, ingredients }) => ({
@@ -47,17 +58,5 @@ export async function generateShoppingList(
     return shoppingListSchema.parse(raw);
   }
 
-  if (plannedMeals.length === 0) {
-    return { items: [] };
-  }
-
-  const raw = await invokeGenerateShoppingList({
-    plannedMeals: plannedMeals.map(({ name, slot, dayIndex }) => ({
-      name,
-      slot,
-      dayIndex,
-    })),
-  });
-
-  return shoppingListSchema.parse(raw);
+  return { items: [] };
 }
