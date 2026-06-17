@@ -120,6 +120,42 @@ export function toAiUserMessage(error: unknown): string {
   return 'Não foi possível completar a operação. Tente novamente.';
 }
 
+/** User-facing copy for on-demand recipe generation failures. */
+export function toRecipeUserMessage(error: unknown): string {
+  const edgeCode = getEdgeErrorCode(error);
+  const message = getErrorMessage(error);
+
+  if (edgeCode === 'UNAUTHORIZED') {
+    return 'Entre na conta para gerar receitas.';
+  }
+
+  if (edgeCode === 'NETWORK' || /Failed to fetch|Network request failed|network/i.test(message)) {
+    return 'Sem conexão estável. Verifique a internet e tente gerar a receita de novo.';
+  }
+
+  if (edgeCode === 'TIMEOUT' || isRequestTimeoutError(error)) {
+    return 'A geração da receita demorou demais. Toque em Gerar receita para tentar de novo.';
+  }
+
+  if (edgeCode === 'GEMINI_UNAVAILABLE' || /503|high demand|overloaded|UNAVAILABLE/i.test(message)) {
+    return 'O serviço de receitas está ocupado. Aguarde alguns segundos e tente de novo.';
+  }
+
+  if (edgeCode === 'QUOTA_EXCEEDED' || isQuotaExceededError(error)) {
+    return 'Cota da API esgotada. Aguarde o reset ou verifique billing no Google AI Studio.';
+  }
+
+  if (edgeCode === 'VALIDATION' || edgeCode === 'BAD_REQUEST' || error instanceof ZodError) {
+    return 'Não conseguimos montar essa receita agora. Toque em Gerar receita para tentar outra vez.';
+  }
+
+  if (edgeCode === 'CONFIGURATION') {
+    return 'Supabase não configurado para gerar receitas.';
+  }
+
+  return 'Não foi possível gerar a receita agora. Toque em Gerar receita para tentar de novo.';
+}
+
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

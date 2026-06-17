@@ -52,6 +52,7 @@ export default function DietScreen() {
   const {
     generateForMeal,
     loadingMealId,
+    isRecipeLoading,
     errorMealId,
     error: recipeError,
   } = useRecipeGenerator();
@@ -95,14 +96,19 @@ export default function DietScreen() {
   }
 
   async function handleGenerateRecipe(meal: PlannedMeal) {
-    try {
-      const recipe = await generateForMeal(meal);
-      hapticSuccess();
-      showToast('Receita gerada');
-      router.push(`/recipe/${recipe.id}`);
-    } catch {
-      // error surfaced via recipeError
+    if (isRecipeLoading) return;
+
+    const result = await generateForMeal(meal);
+    if (!result.success) {
+      if (result.error) {
+        showToast(result.error, 'error');
+      }
+      return;
     }
+
+    hapticSuccess();
+    showToast('Receita gerada');
+    router.push(`/recipe/${result.recipe.id}`);
   }
 
   return (
@@ -226,7 +232,7 @@ export default function DietScreen() {
                     <Button
                       label={generatingRecipe ? 'Gerando receita…' : 'Gerar receita'}
                       onPress={() => handleGenerateRecipe(meal)}
-                      disabled={generatingRecipe}
+                      disabled={isRecipeLoading}
                       style={styles.generateRecipeBtn}
                     />
                   ) : null}

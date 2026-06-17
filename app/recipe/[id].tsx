@@ -6,6 +6,7 @@ import { Card } from '../../src/components/Card';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { StatPill } from '../../src/components/StatPill';
+import { formatServingsPt } from '../../src/lib/strings';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/tokens';
@@ -30,7 +31,10 @@ export default function RecipeScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title={recipe.name} subtitle={`${recipe.servings} porções · meal-prep`} />
+      <ScreenHeader
+        title={recipe.name}
+        subtitle={`${formatServingsPt(recipe.servings)} · meal-prep`}
+      />
 
       <Card style={styles.macrosCard}>
         <View style={styles.macrosHeader}>

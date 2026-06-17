@@ -88,6 +88,7 @@ type AppState = PersistedSlice & {
   setMealPlan: (plannedMeals: PlannedMeal[], recipes: Recipe[], summary?: string) => void;
   upsertRecipe: (recipe: Recipe) => void;
   linkPlannedMealRecipe: (plannedMealId: string, recipeId: string) => void;
+  saveGeneratedRecipe: (plannedMealId: string, recipe: Recipe) => void;
   setShopping: (items: ShoppingItem[]) => void;
   replacePersistedState: (slice: PersistedSlice) => void;
   setLastSyncedAt: (iso: string | null) => void;
@@ -186,12 +187,14 @@ export const useAppStore = create<AppState>()(
       upsertRecipe: (recipe) =>
         set((s) => {
           const index = s.recipes.findIndex((r) => r.id === recipe.id);
-          if (index >= 0) {
-            const recipes = [...s.recipes];
-            recipes[index] = recipe;
-            return { recipes };
-          }
-          return { recipes: [...s.recipes, recipe] };
+          const recipes =
+            index >= 0
+              ? s.recipes.map((r, i) => (i === index ? recipe : r))
+              : [...s.recipes, recipe];
+          return {
+            recipes,
+            profile: { ...s.profile, updatedAt: new Date().toISOString() },
+          };
         }),
 
       linkPlannedMealRecipe: (plannedMealId, recipeId) =>
@@ -199,7 +202,24 @@ export const useAppStore = create<AppState>()(
           plannedMeals: s.plannedMeals.map((meal) =>
             meal.id === plannedMealId ? { ...meal, recipeId } : meal,
           ),
+          profile: { ...s.profile, updatedAt: new Date().toISOString() },
         })),
+
+      saveGeneratedRecipe: (plannedMealId, recipe) =>
+        set((s) => {
+          const index = s.recipes.findIndex((r) => r.id === recipe.id);
+          const recipes =
+            index >= 0
+              ? s.recipes.map((r, i) => (i === index ? recipe : r))
+              : [...s.recipes, recipe];
+          return {
+            recipes,
+            plannedMeals: s.plannedMeals.map((meal) =>
+              meal.id === plannedMealId ? { ...meal, recipeId: recipe.id } : meal,
+            ),
+            profile: { ...s.profile, updatedAt: new Date().toISOString() },
+          };
+        }),
 
       setShopping: (items) => set({ shopping: items }),
 
