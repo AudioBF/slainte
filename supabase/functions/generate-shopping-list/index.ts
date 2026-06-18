@@ -4,6 +4,7 @@ import { generateStructuredJson, toGeminiErrorInfo } from '../_shared/gemini.ts'
 import { jsonError, jsonOk, readJson } from '../_shared/http.ts';
 import {
   buildShoppingListRequestPrompt,
+  consolidateShoppingListItems,
   shoppingListResponseSchema,
   shoppingListSchema,
   validateShoppingListRequest,
@@ -48,7 +49,8 @@ Deno.serve(async (req) => {
       return jsonError('VALIDATION', 'Gemini returned an invalid shopping list.', 502);
     }
 
-    return jsonOk(parsed.data);
+    const items = consolidateShoppingListItems(parsed.data.items);
+    return jsonOk({ items });
   } catch (error) {
     const info = toGeminiErrorInfo(error);
     return jsonError(info.code, info.message, info.status);

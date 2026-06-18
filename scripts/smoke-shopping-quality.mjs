@@ -1,6 +1,6 @@
 /**
- * Smoke: shopping list source priority (plannedMeals over recipes).
- * Usage: node scripts/smoke-shopping-source.mjs
+ * Smoke: shopping list quality from plannedMeals (Shopping Quality v1).
+ * Usage: node scripts/smoke-shopping-quality.mjs
  */
 import { readFileSync } from 'fs';
 import { createClient } from '@supabase/supabase-js';
@@ -35,6 +35,31 @@ const sampleRecipe = {
   ],
 };
 
+function normalizeName(name) {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '');
+}
+
+function countDuplicateNames(items) {
+  const seen = new Set();
+  let dupes = 0;
+  for (const item of items) {
+    const key = normalizeName(item.name);
+    if (!key) continue;
+    if (seen.has(key)) dupes += 1;
+    else seen.add(key);
+  }
+  return dupes;
+}
+
+function countVagueItems(items) {
+  const vague = /variad|temperos?\b|acompanhamento|misc|assorted/i;
+  return items.filter((i) => vague.test(i.name)).length;
+}
+
 async function invokeShopping(token, body) {
   const started = Date.now();
   const res = await fetch(`${url}/functions/v1/generate-shopping-list`, {
@@ -51,14 +76,8 @@ async function invokeShopping(token, body) {
     durationMs: Date.now() - started,
     httpStatus: res.status,
     ok: json?.ok === true,
-    items: json?.data?.items?.length ?? 0,
+    items: json?.data?.items ?? [],
   };
-}
-
-function pickShoppingSource(plannedMeals, recipes) {
-  if (plannedMeals.length > 0) return 'plannedMeals';
-  if (recipes.length > 0) return 'recipes';
-  return 'empty';
 }
 
 async function main() {
@@ -78,31 +97,39 @@ async function main() {
     throw new Error(`Expected >=21 plannedMeals, got ${plannedMeals.length}`);
   }
 
-  const source = pickShoppingSource(plannedMeals, [sampleRecipe]);
-  const plannedOnly = await invokeShopping(token, {
+  const plannedResult = await invokeShopping(token, {
     plannedMeals: plannedMeals.map(({ name, slot, dayIndex }) => ({ name, slot, dayIndex })),
   });
-  const recipeOnly = await invokeShopping(token, { recipes: [sampleRecipe] });
+  const recipeResult = await invokeShopping(token, { recipes: [sampleRecipe] });
 
-  const ok =
-    source === 'plannedMeals' &&
-    plannedOnly.ok &&
-    recipeOnly.ok &&
-    plannedOnly.items > recipeOnly.items &&
-    plannedOnly.items >= 28;
+  const itemCount = plannedResult.items.length;
+  const duplicateNames = countDuplicateNames(plannedResult.items);
+  const vagueCount = countVagueItems(plannedResult.items);
+
+  const plannedOk =
+    plannedResult.ok &&
+    itemCount >= 28 &&
+    itemCount <= 55 &&
+    duplicateNames === 0 &&
+    vagueCount <= 2;
+
+  const recipeFallbackOk = recipeResult.ok && recipeResult.items.length >= 3;
+
+  const ok = plannedOk && recipeFallbackOk;
 
   console.log(
     JSON.stringify(
       {
         ok,
         planSource,
-        source,
         plannedMeals: plannedMeals.length,
-        recipesInStore: 1,
-        plannedMealsItems: plannedOnly.items,
-        recipeOnlyItems: recipeOnly.items,
-        plannedDurationMs: plannedOnly.durationMs,
-        recipeDurationMs: recipeOnly.durationMs,
+        itemCount,
+        duplicateNames,
+        vagueCount,
+        recipeFallbackItems: recipeResult.items.length,
+        plannedDurationMs: plannedResult.durationMs,
+        recipeDurationMs: recipeResult.durationMs,
+        sampleItems: plannedResult.items.slice(0, 5).map((i) => `${i.name} (${i.quantity})`),
       },
       null,
       2,
