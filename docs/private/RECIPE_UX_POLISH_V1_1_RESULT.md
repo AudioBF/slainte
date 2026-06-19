@@ -1,7 +1,7 @@
 # Recipe UX Polish v1.1 — Result
 
 **Date:** 2026-06-19  
-**Status:** ✅ PASS — local build validated
+**Status:** ✅ PASS — deployed and validated in production
 
 ## Objective
 
@@ -75,13 +75,34 @@ Fixture: `servings: 1`, linked `plannedMeal` with matching `recipeId`.
 | `Passo a passo` with numbered steps | ✅ |
 | `Voltar ao cardápio` present | ✅ |
 
-**Note:** Production PWA at https://slainte-sigma.vercel.app will show the new copy after the next Vercel deploy of this commit. Edge Functions were not redeployed (not required).
+**Note:** Production PWA validated after Vercel deploy (bundle `entry-704f6a6962ec9a85808107f45aa71290.js`).
+
+## Production smoke (2026-06-19)
+
+URL: https://slainte-sigma.vercel.app  
+Commit: `297756b` — `fix(recipe): polish recipe screen copy and servings context`
+
+| Check | Result |
+|---|---|
+| Open recipe from planned card (Gerar receita) | ✅ |
+| `1 porção · receita prática` | ✅ |
+| No `meal-prep` when `servings === 1` | ✅ |
+| `Baseado em: {card}` | ✅ |
+| `Estimativa por porção` | ✅ |
+| `Estimativa IA` badge | ✅ |
+| Disclaimer once | ✅ |
+| Ingredientes + passo a passo | ✅ |
+| `Voltar ao cardápio` | ✅ |
+| Dieta → Ver receita → same route | ✅ |
+| Compras intact (41 items, sections) | ✅ |
+| Hoje loads with plan data | ✅ |
+
+Sample recipe: **Ovos mexidos com queijo e tomate cereja** — `/recipe/recipe-1781909213946-4xq521m`.
 
 ## Risks / pendencies
 
 - Long recipe titles may still truncate in `ScreenHeader` (`numberOfLines={1}`) — accepted for v1.1.
 - `servings > 1` manual smoke not re-run in browser (no fixture in session); logic covered by `formatRecipeSubtitle()` branch review.
-- Vercel production deploy pending after git push.
 
 ## Regression guard
 
@@ -95,4 +116,4 @@ Fixture: `servings: 1`, linked `plannedMeal` with matching `recipeId`.
 
 ## Verdict
 
-**Recipe UX Polish v1.1: PASS** — ready to commit and deploy web bundle.
+**Recipe UX Polish v1.1: PASS** — live on production; automated build + production UX smoke passed.
