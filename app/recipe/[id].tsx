@@ -12,10 +12,19 @@ import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/tokens';
 import { typography } from '../../src/theme/typography';
 
+function formatRecipeSubtitle(servings: number): string {
+  const label = formatServingsPt(servings);
+  if (Math.round(servings) === 1) return `${label} · receita prática`;
+  return `${label} · meal-prep`;
+}
+
 export default function RecipeScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipe = useAppStore((s) => s.recipes.find((r) => r.id === id));
+  const linkedMeal = useAppStore((s) =>
+    id ? s.plannedMeals.find((meal) => meal.recipeId === id) : undefined,
+  );
 
   if (!recipe) {
     return (
@@ -31,14 +40,23 @@ export default function RecipeScreen() {
 
   return (
     <Screen>
-      <ScreenHeader
-        title={recipe.name}
-        subtitle={`${formatServingsPt(recipe.servings)} · meal-prep`}
-      />
+      <ScreenHeader title={recipe.name} subtitle={formatRecipeSubtitle(recipe.servings)} />
+
+      <Card>
+        <Text style={typography.body}>Receita sugerida a partir do seu cardápio.</Text>
+        {linkedMeal ? (
+          <Text style={[typography.caption, styles.contextLine]}>
+            Baseado em: {linkedMeal.name}
+          </Text>
+        ) : null}
+        <Text style={[typography.caption, styles.contextLine]}>
+          Sugestão automática — não substitui orientação médica ou nutricional.
+        </Text>
+      </Card>
 
       <Card style={styles.macrosCard}>
         <View style={styles.macrosHeader}>
-          <Text style={typography.label}>Por porção</Text>
+          <Text style={typography.label}>Estimativa por porção</Text>
           <AiBadge compact />
         </View>
         <StatPill
@@ -47,6 +65,9 @@ export default function RecipeScreen() {
           carbs={recipe.carbsPerServing}
           fat={recipe.fatPerServing}
         />
+        <Text style={[typography.caption, styles.macroHint]}>
+          Valores aproximados para acompanhar sua meta — não precisa ser exato.
+        </Text>
       </Card>
 
       <Card>
@@ -62,7 +83,7 @@ export default function RecipeScreen() {
       </Card>
 
       <Card>
-        <Text style={typography.label}>Modo de preparo</Text>
+        <Text style={typography.label}>Passo a passo</Text>
         {recipe.steps.map((step, i) => (
           <View key={i} style={styles.stepRow}>
             <View style={styles.stepNum}>
@@ -79,6 +100,9 @@ export default function RecipeScreen() {
 }
 
 const styles = StyleSheet.create({
+  contextLine: {
+    marginTop: spacing.sm,
+  },
   macrosCard: {
     backgroundColor: colors.cream,
   },
@@ -87,6 +111,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  macroHint: {
+    marginTop: spacing.sm,
   },
   ingredientRow: {
     flexDirection: 'row',
