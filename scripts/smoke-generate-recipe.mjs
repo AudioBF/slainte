@@ -24,9 +24,9 @@ const email = process.env.DIAG_EMAIL || 'slainte.phase3b.ui+1781627000000@exampl
 const password = process.env.DIAG_PASSWORD || 'Phase3BTest!123456';
 
 const profile = {
-  goal: 'maintain',
+  goal: 'gain',
   restrictions: '',
-  dailyGoals: { calories: 2100, protein: 140, carbs: 220, fat: 65 },
+  dailyGoals: { calories: 2600, protein: 170, carbs: 300, fat: 80 },
 };
 
 const plannedMeal = {
@@ -39,6 +39,98 @@ const plannedMeal = {
   carbs: 48,
   fat: 14,
 };
+
+const rareOrGourmetTerms = [
+  'trufa',
+  'foie',
+  'wagyu',
+  'caviar',
+  'vieira',
+  'lagosta',
+  'açafrão',
+  'saffron',
+  'tapioca',
+  'requeijão',
+  'leite condensado',
+  'protein powder',
+  'whey protein',
+];
+
+function isNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function outsidePercent(value, target, percent) {
+  if (!isNumber(value) || !isNumber(target) || target <= 0) return false;
+  return Math.abs(value - target) > target * percent;
+}
+
+function hasVagueQuantity(text) {
+  return /\ba gosto\b/i.test(text) && !/\d/.test(text);
+}
+
+function allowsBatchServings(mealName) {
+  return /\b(meal[- ]?prep|marmita|lote|sobras?|semana)\b/i.test(mealName);
+}
+
+function collectWarnings(recipe) {
+  const warnings = [];
+
+  if (recipe.ingredients.length > 8) {
+    warnings.push(`ingredients.length > 8 (${recipe.ingredients.length})`);
+  }
+
+  if (recipe.steps.length < 4 || recipe.steps.length > 7) {
+    warnings.push(`steps.length fora do intervalo 4-7 (${recipe.steps.length})`);
+  }
+
+  const numberedStep = recipe.steps.find((step) => /^\s*\d+[.)]/.test(step));
+  if (numberedStep) {
+    warnings.push(`step começa com numeração: "${numberedStep.slice(0, 60)}"`);
+  }
+
+  if (recipe.servings !== 1 && !allowsBatchServings(plannedMeal.name)) {
+    warnings.push(`servings diferente de 1 sem card de meal-prep/lote (${recipe.servings})`);
+  }
+
+  if (outsidePercent(recipe.caloriesPerServing, plannedMeal.calories, 0.1)) {
+    warnings.push(
+      `caloriesPerServing fora de ±10% (${recipe.caloriesPerServing} vs ${plannedMeal.calories})`,
+    );
+  }
+
+  if (profile.goal === 'gain' && recipe.proteinPerServing < plannedMeal.protein * 0.85) {
+    warnings.push(
+      `proteinPerServing abaixo de 85% do alvo em hipertrofia (${recipe.proteinPerServing} vs ${plannedMeal.protein})`,
+    );
+  } else if (outsidePercent(recipe.proteinPerServing, plannedMeal.protein, 0.1)) {
+    warnings.push(
+      `proteinPerServing fora de ±10% (${recipe.proteinPerServing} vs ${plannedMeal.protein})`,
+    );
+  }
+
+  if (outsidePercent(recipe.carbsPerServing, plannedMeal.carbs, 0.15)) {
+    warnings.push(`carbsPerServing fora de ±15% (${recipe.carbsPerServing} vs ${plannedMeal.carbs})`);
+  }
+
+  if (outsidePercent(recipe.fatPerServing, plannedMeal.fat, 0.15)) {
+    warnings.push(`fatPerServing fora de ±15% (${recipe.fatPerServing} vs ${plannedMeal.fat})`);
+  }
+
+  for (const ingredient of recipe.ingredients) {
+    const label = `${ingredient.name ?? ''} ${ingredient.amount ?? ''}`;
+    const lower = label.toLowerCase();
+    const rareTerm = rareOrGourmetTerms.find((term) => lower.includes(term));
+    if (rareTerm) {
+      warnings.push(`possível ingrediente gourmet/raro: "${rareTerm}"`);
+    }
+    if (hasVagueQuantity(label)) {
+      warnings.push(`quantidade vaga sem número: "${label}"`);
+    }
+  }
+
+  return warnings;
+}
 
 async function main() {
   if (!url || !anon) {
@@ -74,14 +166,25 @@ async function main() {
   }
 
   const recipe = json?.data;
-  const ok =
-    res.status === 200 &&
-    json?.ok === true &&
+  const requiredMacroFields = [
+    'caloriesPerServing',
+    'proteinPerServing',
+    'carbsPerServing',
+    'fatPerServing',
+  ];
+  const hasRequiredShape =
     typeof recipe?.name === 'string' &&
+    isNumber(recipe?.servings) &&
     Array.isArray(recipe?.ingredients) &&
     recipe.ingredients.length > 0 &&
     Array.isArray(recipe?.steps) &&
-    recipe.steps.length > 0;
+    recipe.steps.length > 0 &&
+    requiredMacroFields.every((field) => isNumber(recipe?.[field]));
+  const warnings = hasRequiredShape ? collectWarnings(recipe) : [];
+  const ok =
+    res.status === 200 &&
+    json?.ok === true &&
+    hasRequiredShape;
 
   console.log(
     JSON.stringify(
@@ -95,6 +198,10 @@ async function main() {
         steps: recipe?.steps?.length ?? null,
         servings: recipe?.servings ?? null,
         caloriesPerServing: recipe?.caloriesPerServing ?? null,
+        proteinPerServing: recipe?.proteinPerServing ?? null,
+        carbsPerServing: recipe?.carbsPerServing ?? null,
+        fatPerServing: recipe?.fatPerServing ?? null,
+        warnings,
       },
       null,
       2,

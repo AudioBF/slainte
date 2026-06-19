@@ -14,6 +14,13 @@ const SLOT_LABELS = {
   snack: 'Lanche',
 };
 
+const SLOT_RULES = {
+  breakfast: 'café da manhã rápido, pouca louça e sem forno longo',
+  lunch: 'almoço completo, alto em proteína, com proteína + base + vegetal simples',
+  dinner: 'jantar leve, confortável, poucos passos e sem preparo pesado',
+  snack: 'lanche de montagem simples, de preferência sem fogão',
+};
+
 function roundMacro(value: number): number {
   return Math.round(Number(value) || 0);
 }
@@ -129,14 +136,47 @@ export function buildRecipePrompt(profile: UserProfile, meal: PlannedMealInput):
 - Momento: ${SLOT_LABELS[meal.slot]}
 - Macros da refeição (referência): ${meal.calories} kcal · P ${meal.protein}g · C ${meal.carbs}g · G ${meal.fat}g
 
-## Regras
-1. Receita em português brasileiro, passos curtos e numerados (mínimo 3)
-2. Ingredientes práticos para Lidl, Aldi, Tesco, Dunnes, SuperValu
-3. Quantidades realistas com unidades (g, kg, un, colheres)
-4. Macros por porção coerentes com a refeição planejada (±15%)
-5. servings: 1 para refeição individual, ou 2–4 se meal-prep fizer sentido
-6. Respeite restrições alimentares rigorosamente
-7. Sugestão automática — não substitui orientação médica
+## Fonte da verdade
+- A refeição planejada acima é a fonte da verdade.
+- Respeite o nome/card da refeição. Não transforme em outro prato.
+- Mantenha a proteína principal, a base e o estilo quando estiverem claros no nome.
+- O resultado deve ser algo que uma pessoa com rotina corrida em Dublin consiga cozinhar e comer durante a semana.
+
+## Qualidade esperada
+- Português do Brasil, tom direto, caseiro e prático.
+- Ingredientes comuns em Dublin, fáceis de achar em Lidl, Tesco, Aldi ou Dunnes.
+- Não gourmetizar. Evite ingredientes caros, raros, técnicas avançadas e marinadas longas.
+- Evite ingredientes muito brasileiros ou difíceis de achar na Irlanda, como tapioca, requeijão e leite condensado.
+- Evite ervas frescas raras, farinhas especiais, molhos importados e protein powder como base da receita.
+- Prefira proteínas simples: frango, peru, carne moída magra, ovos, atum em lata, salmão simples, sardinha, iogurte natural/grego, queijo simples, grão-de-bico, lentilha ou tofu básico.
+- Prefira carboidratos simples: arroz, batata, batata doce, pão integral, wrap/tortilla, aveia, massa seca, quinoa ou granola simples.
+- Use vegetais/frutas comuns: espinafre, brócolis, cenoura, abobrinha, tomate, alface, pepino, banana, maçã ou frutas vermelhas congeladas.
+- Despensa básica permitida: azeite, óleo, sal, pimenta, alho, cebola, passata/tomate triturado, milho, ervilhas congeladas, pasta de amendoim e húmus.
+
+## Regras do slot
+- Para este slot: ${SLOT_RULES[meal.slot]}.
+
+## Formato e execução
+- Retorne exatamente o schema solicitado, sem campos extras.
+- servings deve ser 1 por padrão.
+- Use 2 porções apenas se o nome do card indicar claramente meal-prep, marmita, lote ou sobra planejada.
+- Idealmente use no máximo 8 ingredientes.
+- ingredients deve ter quantidades com unidade: g, ml, unidade, fatia, colher de sopa ou colher de chá.
+- Evite "a gosto" sem uma quantidade padrão. Óleo/azeite sempre precisa de quantidade.
+- steps deve ter entre 4 e 7 itens.
+- Cada step deve ser uma ação clara, curta e executável.
+- Não coloque numeração dentro do texto dos steps; a UI já numera.
+- Respeite restrições alimentares rigorosamente.
+- Sugestão automática; não substitui orientação médica.
+
+## Macros
+- Macros são estimativas, mas precisam ser plausíveis com os ingredientes listados.
+- caloriesPerServing deve tentar ficar dentro de ±10% de ${meal.calories} kcal.
+- proteinPerServing deve tentar ficar dentro de ±10% de ${meal.protein}g.
+- Se o objetivo for hipertrofia, proteinPerServing nunca deve ficar abaixo de ${Math.round(meal.protein * 0.85)}g.
+- carbsPerServing deve tentar ficar dentro de ±15% de ${meal.carbs}g.
+- fatPerServing deve tentar ficar dentro de ±15% de ${meal.fat}g.
+- Use números inteiros.
 
 Responda APENAS com JSON válido no schema solicitado.`;
 }
