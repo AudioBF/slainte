@@ -113,7 +113,7 @@ export default function DietScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Dieta" subtitle="Cardápio semanal com meal-prep" />
+      <ScreenHeader title="Dieta" subtitle="Planeje a semana — receitas quando você quiser" />
 
       <Section
         title={hasPlan ? 'Gerar novo plano' : 'Seu plano semanal'}
@@ -162,7 +162,11 @@ export default function DietScreen() {
             </Card>
           ) : null}
 
-          <Section title="Cardápio" subtitle="Escolha o dia — veja macros e registre refeições" />
+          <Section
+            title="Cardápio"
+            subtitle="Escolha o dia — veja macros e registre refeições"
+          />
+          <Text style={styles.planEstimateHint}>Macros estimados do cardápio.</Text>
 
           <Card flat>
             <DayPickerRow
@@ -172,7 +176,7 @@ export default function DietScreen() {
             />
             {!canRegisterToday ? (
               <Text style={styles.registerHint}>
-                Registro disponível apenas para o dia de hoje.
+                Só dá para registrar refeições de hoje aqui.
               </Text>
             ) : null}
           </Card>
@@ -206,7 +210,7 @@ export default function DietScreen() {
                           <Text style={styles.recipeHint}>Toque para ver receita e preparo ›</Text>
                         ) : (
                           <Text style={styles.recipeHintMuted}>
-                            Gere a receita para ver ingredientes e preparo
+                            Toque em Gerar receita para ingredientes e passo a passo
                           </Text>
                         )}
                       </View>
@@ -283,6 +287,11 @@ export default function DietScreen() {
 const styles = StyleSheet.create({
   summaryCard: {
     backgroundColor: colors.cream,
+  },
+  planEstimateHint: {
+    ...typography.caption,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   error: {
     fontFamily: 'Outfit_400Regular',

@@ -70,7 +70,7 @@ export default function ShoppingScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Compras" subtitle="Lista gerada do seu cardápio" />
+      <ScreenHeader title="Compras" subtitle="Compras da semana a partir do plano" />
 
       <Card>
         <ProgressBar
@@ -80,7 +80,7 @@ export default function ShoppingScreen() {
         />
         <View style={styles.actions}>
           <Button
-            label={generating ? 'Gerando...' : 'Do cardápio'}
+            label={generating ? 'Gerando lista…' : 'Gerar da semana'}
             onPress={handleGenerate}
             variant="outline"
             style={styles.genBtn}
@@ -114,7 +114,7 @@ export default function ShoppingScreen() {
           ) : null}
         </View>
         {!hasPlan ? (
-          <Text style={styles.hint}>Gere um cardápio na aba Dieta para usar &quot;Do cardápio&quot;.</Text>
+          <Text style={styles.hint}>Primeiro gere o cardápio em Dieta, depois volte aqui.</Text>
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {generating ? (
@@ -157,8 +157,8 @@ export default function ShoppingScreen() {
             title="Lista vazia"
             message={
               hasPlan
-                ? 'Toque em "Do cardápio" para gerar a lista da semana.'
-                : 'Gere um cardápio na Dieta ou adicione itens manualmente.'
+                ? 'Toque em Gerar da semana para montar a lista.'
+                : 'Primeiro gere o cardápio em Dieta, depois volte aqui.'
             }
           />
         </Card>

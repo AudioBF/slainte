@@ -27,7 +27,8 @@ export function TodayPlanSection({ status, onRegister }: Props) {
 
         {allLogged ? (
           <Text style={[typography.body, styles.complete]}>
-            Todas as refeições do plano de hoje foram registradas.
+            Todas as refeições do plano de hoje foram registradas. Plano de hoje concluído — boa
+            consistência.
           </Text>
         ) : nextUnlogged ? (
           <View style={styles.nextMeal}>

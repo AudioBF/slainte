@@ -9,8 +9,8 @@ export const MEAL_PLAN_MESSAGES = [
   'Montando cardápio da semana…',
   'Variando cafés, almoços e jantares…',
   'Ajustando às suas metas e restrições…',
-  'Gerando receitas e ingredientes…',
-  'Finalizando o plano meal-prep…',
+  'Organizando cafés, almoços e jantares…',
+  'Fechando o cardápio da semana…',
 ] as const;
 
 export const SHOPPING_LIST_MESSAGES = [

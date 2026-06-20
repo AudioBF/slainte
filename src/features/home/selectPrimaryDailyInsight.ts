@@ -98,7 +98,7 @@ function selectNonPlanInsight(
     return {
       id: 'low_protein',
       severity: 'warning',
-      title: 'Proteína abaixo do ideal',
+      title: 'Dá para reforçar proteína hoje',
       message: `Faltam ~${proteinGap}g de proteína para a meta. Priorize proteína no jantar.`,
     };
   }
@@ -108,7 +108,7 @@ function selectNonPlanInsight(
     return {
       id: 'over_calories',
       severity: 'warning',
-      title: 'Acima da meta de calorias',
+      title: 'Calorias um pouco acima da meta',
       message: `Passou ~${calorieOver} kcal da meta. Amanhã volte ao plano sem culpa — consistência importa mais.`,
     };
   }
@@ -118,7 +118,7 @@ function selectNonPlanInsight(
     return {
       id: 'fat_high',
       severity: 'warning',
-      title: 'Atenção à gordura hoje',
+      title: 'Gordura um pouco alta hoje',
       message:
         'Você ainda tem calorias disponíveis, mas a gordura já passou da meta. Nas próximas refeições, priorize opções mais leves.',
     };
@@ -161,7 +161,7 @@ export function selectPrimaryDailyInsight(input: SelectPrimaryDailyInsightInput)
       id: 'empty_day',
       severity: 'info',
       title: 'Dia ainda sem registros',
-      message: 'Fotografe sua próxima refeição ou registre uma do cardápio.',
+      message: 'Registre a próxima refeição do cardápio ou fotografe o prato.',
       actionLabel: 'Fotografar refeição',
       actionRoute: '/meal',
     };

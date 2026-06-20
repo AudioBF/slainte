@@ -69,7 +69,7 @@ export default function MarketsScreen() {
 
       <Card style={styles.tip}>
         <Text style={typography.caption}>
-          Dica: gere sua lista de compras na aba Compras antes de ir ao mercado.
+          Dica: leve a lista de Compras no celular antes de ir ao mercado.
         </Text>
       </Card>
     </Screen>

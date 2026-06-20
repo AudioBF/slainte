@@ -235,6 +235,9 @@ export default function TodayScreen() {
                   goal={profile.dailyGoals.fat}
                   color={colors.fat}
                 />
+                <Text style={typography.caption}>
+                  Valores somam o que você registrou hoje.
+                </Text>
               </View>
             </Card>
 
@@ -253,7 +256,10 @@ export default function TodayScreen() {
 
             {dayMeals.length === 0 ? (
               <Card>
-                <Text style={typography.body}>Nenhuma refeição registrada neste dia.</Text>
+                <Text style={typography.body}>
+                  Nada registrado ainda. Use Registrar no cardápio de hoje ou Fotografar uma
+                  refeição.
+                </Text>
               </Card>
             ) : (
               <Card flat>
