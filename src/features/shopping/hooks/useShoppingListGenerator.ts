@@ -4,8 +4,6 @@ import { toAiUserMessage } from '../../../services/ai/errors';
 import { useAppStore } from '../../../store/useAppStore';
 
 export function useShoppingListGenerator() {
-  const recipes = useAppStore((s) => s.recipes);
-  const plannedMeals = useAppStore((s) => s.plannedMeals);
   const setShopping = useAppStore((s) => s.setShopping);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,6 +12,7 @@ export function useShoppingListGenerator() {
     setLoading(true);
     setError(null);
     try {
+      const { recipes, plannedMeals } = useAppStore.getState();
       const result = await generateShoppingList({ recipes, plannedMeals });
       setShopping(mapShoppingListToItems(result));
       return result;
@@ -24,7 +23,7 @@ export function useShoppingListGenerator() {
     } finally {
       setLoading(false);
     }
-  }, [plannedMeals, recipes, setShopping]);
+  }, [setShopping]);
 
   return { generate, loading, error };
 }
