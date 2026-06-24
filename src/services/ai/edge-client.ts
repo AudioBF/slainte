@@ -91,11 +91,11 @@ function messageForEdgeFailure(failure: EdgeFailure): string {
     case 'NETWORK':
       return 'Não foi possível conectar à função de IA.';
     case 'TIMEOUT':
-      return 'A IA demorou demais para responder. Tente novamente — costuma levar 15–30 segundos.';
+      return 'A geração demorou mais que o esperado. Tente novamente em alguns minutos.';
     case 'QUOTA_EXCEEDED':
       return 'Cota da API esgotada. Aguarde o reset ou verifique billing no Google AI Studio.';
     case 'GEMINI_UNAVAILABLE':
-      return 'O Gemini está sobrecarregado no momento. Aguarde alguns segundos e tente de novo.';
+      return 'O serviço de IA ficou sobrecarregado agora. Espere alguns minutos e tente novamente.';
     case 'BAD_REQUEST':
     case 'VALIDATION':
       return 'A IA retornou um formato inválido. Toque em gerar novamente.';
@@ -165,10 +165,19 @@ async function invokeAiFunction<T, TName extends keyof AiFunctionBodyMap>(
       throw new AiEdgeError('UNAUTHORIZED', 'Entre na conta para usar a IA.', status, error);
     }
 
+    if (status === 503) {
+      throw new AiEdgeError(
+        'GEMINI_UNAVAILABLE',
+        'O serviço de IA ficou sobrecarregado agora. Espere alguns minutos e tente novamente.',
+        status,
+        error,
+      );
+    }
+
     if (status === 504) {
       throw new AiEdgeError(
         'TIMEOUT',
-        'A IA demorou demais para responder. Tente novamente — costuma levar 15–30 segundos.',
+        'A geração demorou mais que o esperado. Tente novamente em alguns minutos.',
         status,
         error,
       );

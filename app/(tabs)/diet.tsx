@@ -65,9 +65,13 @@ export default function DietScreen() {
   const canRegisterToday = selectedDietDay === todayDayIndex();
 
   async function handleGenerate() {
-    await generate(restrictions);
-    hapticSuccess();
-    showToast('Cardápio gerado');
+    try {
+      await generate(restrictions);
+      hapticSuccess();
+      showToast('Cardápio gerado');
+    } catch {
+      // Error message is set in useMealPlanGenerator; existing plan is preserved.
+    }
   }
 
   function handleRegisterPlannedMeal(meal: PlannedMeal) {
@@ -147,6 +151,9 @@ export default function DietScreen() {
             style={{ marginTop: spacing.lg }}
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error && hasPlan ? (
+            <Text style={styles.planPreserved}>Seu plano atual foi mantido.</Text>
+          ) : null}
           {generating ? (
             <AiLoadingSkeleton variant="mealPlan" messages={MEAL_PLAN_MESSAGES} active={generating} />
           ) : null}
@@ -298,6 +305,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.orange,
     marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  planPreserved: {
+    ...typography.caption,
+    color: colors.sage,
+    marginTop: spacing.xs,
     textAlign: 'center',
   },
   mealHeader: {

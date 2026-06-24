@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { generateMealPlan } from '../../../services/ai';
-import { toAiUserMessage } from '../../../services/ai/errors';
+import { toMealPlanUserMessage } from '../../../services/ai/errors';
 import { useAppStore } from '../../../store/useAppStore';
 
 export function useMealPlanGenerator() {
@@ -23,7 +23,7 @@ export function useMealPlanGenerator() {
         setMealPlan(result.plannedMeals, result.recipes, result.summary);
         return result;
       } catch (e) {
-        const message = toAiUserMessage(e);
+        const message = toMealPlanUserMessage(e);
         setError(message);
         throw e;
       } finally {

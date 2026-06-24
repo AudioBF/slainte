@@ -120,6 +120,75 @@ export function toAiUserMessage(error: unknown): string {
   return 'Não foi possível completar a operação. Tente novamente.';
 }
 
+function mealPlanEdgeCode(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
+/** Transient provider/infra failures where waiting before retry is appropriate. */
+export function isTransientMealPlanError(error: unknown): boolean {
+  const code = mealPlanEdgeCode(error);
+  if (
+    code === 'GEMINI_UNAVAILABLE' ||
+    code === 'TIMEOUT' ||
+    code === 'QUOTA_EXCEEDED' ||
+    code === 'NETWORK'
+  ) {
+    return true;
+  }
+  const message = getErrorMessage(error);
+  return /503|504|high demand|overloaded|UNAVAILABLE|REQUEST_TIMEOUT/i.test(message);
+}
+
+/** User-facing copy for weekly meal plan generation failures (Edge or client). */
+export function toMealPlanUserMessage(error: unknown): string {
+  const edgeCode = mealPlanEdgeCode(error);
+  const message = getErrorMessage(error);
+
+  if (edgeCode === 'UNAUTHORIZED') {
+    return 'Entre na conta para gerar o cardápio.';
+  }
+
+  if (edgeCode === 'CONFIGURATION') {
+    return 'Supabase não configurado para gerar o cardápio.';
+  }
+
+  if (edgeCode === 'NETWORK' || /Failed to fetch|Network request failed|network/i.test(message)) {
+    return 'Sem conexão estável. Verifique a internet e tente gerar o cardápio de novo.';
+  }
+
+  if (edgeCode === 'TIMEOUT' || isRequestTimeoutError(error)) {
+    return 'A geração demorou mais que o esperado. Tente novamente em alguns minutos.';
+  }
+
+  if (edgeCode === 'GEMINI_UNAVAILABLE' || /503|high demand|overloaded|UNAVAILABLE/i.test(message)) {
+    return 'O serviço de IA ficou sobrecarregado agora. Espere alguns minutos e tente novamente.';
+  }
+
+  if (edgeCode === 'QUOTA_EXCEEDED' || isQuotaExceededError(error)) {
+    return 'Cota da API esgotada. Aguarde o reset ou verifique billing no Google AI Studio.';
+  }
+
+  if (edgeCode === 'BAD_REQUEST' || edgeCode === 'VALIDATION' || error instanceof ZodError) {
+    return 'A IA retornou um formato inválido. Toque em gerar novamente.';
+  }
+
+  if (/Invalid meal plan|JSON\.parse|Unexpected token/i.test(message)) {
+    return 'Resposta da IA incompleta. Tente gerar o cardápio novamente.';
+  }
+
+  if (/API key|401|403|PERMISSION_DENIED/i.test(message)) {
+    return 'Chave da API inválida ou sem permissão. Verifique o .env.';
+  }
+
+  if (edgeCode === 'FUNCTION' || edgeCode === 'INTERNAL') {
+    return 'Não foi possível gerar o cardápio agora. Tente novamente em alguns minutos.';
+  }
+
+  return 'Não foi possível gerar o cardápio agora. Tente novamente em alguns minutos.';
+}
+
 /** User-facing copy for on-demand recipe generation failures. */
 export function toRecipeUserMessage(error: unknown): string {
   const edgeCode = getEdgeErrorCode(error);
