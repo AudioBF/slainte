@@ -127,10 +127,14 @@ export default function ProfileScreen() {
     router.replace('/onboarding');
   }
 
+  function handleReturnHome() {
+    router.replace('/(tabs)');
+  }
+
   function handleMoreOption(key: (typeof MORE_OPTIONS)[number]['key']) {
     if (key === 'onboarding') handleRedoOnboarding();
     else if (key === 'privacy') router.push('/privacy');
-    else router.back();
+    else handleReturnHome();
   }
 
   return (
@@ -200,7 +204,14 @@ export default function ProfileScreen() {
                       onChangeText={(t) => setMacro(field.key, t)}
                       accessibilityLabel={`${field.a11yLabel}, ${dailyGoals[field.key]} ${field.unit}`}
                     />
-                    <Text style={styles.macroBlockUnit}>{field.unit}</Text>
+                    <Text
+                      style={[
+                        styles.macroBlockUnit,
+                        field.unit === 'kcal' ? styles.macroBlockUnitKcal : styles.macroBlockUnitG,
+                      ]}
+                    >
+                      {field.unit}
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -290,6 +301,7 @@ export default function ProfileScreen() {
                   index < MORE_OPTIONS.length - 1 && styles.optionRowBorder,
                 ]}
                 accessibilityRole="button"
+                accessibilityLabel={opt.key === 'back' ? 'Voltar para Hoje' : opt.label}
               >
                 <Text style={styles.optionLabel}>{opt.label}</Text>
                 <Text style={styles.optionChevron}>›</Text>
@@ -348,12 +360,15 @@ const styles = StyleSheet.create({
   macroGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: spacing.sm,
+    gap: spacing.sm,
     marginTop: spacing.sm,
   },
   macroBlock: {
-    width: '48%',
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '47%',
+    maxWidth: '48%',
+    minWidth: 0,
     backgroundColor: colors.cream,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -372,22 +387,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 36,
+    overflow: 'hidden',
   },
   macroBlockInput: {
     flex: 1,
+    flexShrink: 1,
     minWidth: 0,
     fontFamily: 'Outfit_600SemiBold',
-    fontSize: 16,
+    fontSize: 15,
     color: colors.forest,
     paddingVertical: spacing.xs,
     textAlign: 'right',
   },
   macroBlockUnit: {
     fontFamily: 'Outfit_500Medium',
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textMuted,
     marginLeft: spacing.xs,
     flexShrink: 0,
+    textAlign: 'left',
+  },
+  macroBlockUnitKcal: {
+    width: 30,
+  },
+  macroBlockUnitG: {
+    width: 14,
   },
   defaultsLink: {
     alignSelf: 'flex-start',

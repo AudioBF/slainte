@@ -1,7 +1,7 @@
 # Profile UX Polish v1 — Result
 
 **Date:** 2026-06-28  
-**Status:** `PATCH APPLIED` — awaiting manual re-smoke post-deploy  
+**Status:** `PENDING MANUAL SMOKE`  
 **Scope:** UX/layout only on the Perfil screen — no store, auth, Edge, IA, schema, env, or other flows.
 
 ---
@@ -52,6 +52,24 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 ---
 
+## PATCH 2 — BACK NAVIGATION FIX (2026-06-28)
+
+| Issue | Symptom |
+|---|---|
+| “Voltar” em Mais opções | Após “Salvar alterações”, `router.back()` virava no-op ou não saía do Perfil (histórico vazio ou `/profile` direto no PWA); outros itens da lista continuavam funcionando |
+
+| File | Change |
+|---|---|
+| `app/profile.tsx` | `handleReturnHome()` com `router.replace('/(tabs)')`; `accessibilityLabel="Voltar para Hoje"`; ajuste fino no grid de macros (`flexBasis` + `overflow` na row + larguras fixas de unidade) |
+
+**Causa:** navegação dependente de histórico (`router.back()`). Após salvar ou ao abrir `/profile` diretamente, não havia entrada anterior confiável na pilha.
+
+**Correção:** rota determinística para a aba **Hoje** via `/(tabs)` (default tab `index` = Hoje), mesma convenção de `onboarding.tsx` e `meal.tsx`. Usa `replace` para não reentrar no Perfil com “voltar” do browser.
+
+**Macros (ajuste mínimo):** `gap` no grid, `flexBasis: '47%'` + `minWidth: 0`, `overflow: 'hidden'` na row, unidade com largura fixa (`kcal` 30px / `g` 14px) — reforço do patch 1 em layouts estreitos.
+
+---
+
 ## Original v1 visual changes (retained)
 
 ### Objetivo
@@ -99,6 +117,7 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 - [ ] Cancel picker — screen remains interactive; retry works
 - [ ] Select photo — preview centered (`cover`); crop when native editing supported
 - [ ] **Gerenciar conta**, **Sair**, **Mais opções** rows work after save
+- [ ] **Voltar** (Mais opções) — antes e depois de salvar; abrindo `/profile` direto no PWA → vai para **Hoje** (`/(tabs)`)
 - [ ] Refresh — data persists
 - [ ] Web PWA — no post-save freeze; macros layout OK
 
@@ -108,7 +127,7 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 | Check | Result |
 |---|---|
-| `npx tsc --noEmit` | ✅ Pass (2026-06-28 patch) |
+| `npx tsc --noEmit` | ✅ Pass (2026-06-28 patch 2) |
 | `npm run lint` | N/A — no lint script in `package.json` |
 
 ---
