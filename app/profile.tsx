@@ -192,6 +192,7 @@ export default function ProfileScreen() {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTransform, setPreviewTransform] = useState<PreviewTransform>(DEFAULT_PREVIEW_TRANSFORM);
   const [confirmingAvatar, setConfirmingAvatar] = useState(false);
+  const [viewAvatarVisible, setViewAvatarVisible] = useState(false);
 
   useEffect(() => {
     if (!saved) return;
@@ -246,6 +247,15 @@ export default function ProfileScreen() {
     } finally {
       setPickingPhoto(false);
     }
+  }
+
+  function handleViewAvatar() {
+    setViewAvatarVisible(true);
+  }
+
+  function handleEditAvatar() {
+    setViewAvatarVisible(false);
+    void pickAvatar();
   }
 
   async function replacePendingPhoto() {
@@ -364,19 +374,19 @@ export default function ProfileScreen() {
                 uri={draftAvatarUri}
                 name={profile.displayName}
                 size={72}
-                onPress={pickAvatar}
+                onPress={handleViewAvatar}
               />
               <View style={styles.avatarMeta}>
                 <Text style={typography.subtitle}>{profile.displayName || 'Sem nome'}</Text>
                 <Pressable
-                  onPress={pickAvatar}
+                  onPress={handleEditAvatar}
                   disabled={pickingPhoto}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel="Alterar foto de perfil"
+                  accessibilityLabel="Editar foto de perfil"
                 >
                   <Text style={styles.changePhoto}>
-                    {pickingPhoto ? 'Abrindo galeria…' : 'Alterar foto'}
+                    {pickingPhoto ? 'Abrindo galeria…' : 'Editar foto'}
                   </Text>
                 </Pressable>
               </View>
@@ -537,6 +547,14 @@ export default function ProfileScreen() {
         />
       </View>
 
+      <AvatarViewerModal
+        visible={viewAvatarVisible}
+        uri={draftAvatarUri}
+        name={profile.displayName}
+        onClose={() => setViewAvatarVisible(false)}
+        onEdit={handleEditAvatar}
+      />
+
       <AvatarPreviewModal
         visible={previewVisible}
         uri={pendingAvatarUri}
@@ -554,6 +572,107 @@ export default function ProfileScreen() {
     </View>
   );
 }
+
+type AvatarViewerModalProps = {
+  visible: boolean;
+  uri: string | null;
+  name?: string;
+  onClose: () => void;
+  onEdit: () => void;
+};
+
+const VIEWER_FRAME = 280;
+
+function AvatarViewerModal({ visible, uri, name, onClose, onEdit }: AvatarViewerModalProps) {
+  const hasPhoto = Boolean(uri?.trim());
+  const initial = name?.trim().charAt(0).toUpperCase() || '?';
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={viewerStyles.backdrop} onPress={onClose}>
+        <View style={viewerStyles.sheet} onStartShouldSetResponder={() => true}>
+          <Text style={viewerStyles.title}>Foto de perfil</Text>
+
+          <View style={viewerStyles.frame}>
+            {hasPhoto ? (
+              <Image source={{ uri: uri! }} style={viewerStyles.photo} contentFit="cover" />
+            ) : (
+              <View style={viewerStyles.fallback}>
+                <Text style={viewerStyles.initial}>{initial}</Text>
+              </View>
+            )}
+          </View>
+
+          {!hasPhoto ? (
+            <Text style={viewerStyles.emptyHint}>Você ainda não adicionou uma foto.</Text>
+          ) : null}
+
+          <View style={viewerStyles.actions}>
+            <Button label="Fechar" onPress={onClose} variant="outline" />
+            <Button label="Editar foto" onPress={onEdit} />
+          </View>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const viewerStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(27, 67, 50, 0.55)',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  sheet: {
+    width: '100%',
+    maxWidth: 360,
+    alignSelf: 'center',
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  title: {
+    fontFamily: 'Fraunces_700Bold',
+    fontSize: 22,
+    color: colors.forest,
+    textAlign: 'center',
+  },
+  frame: {
+    width: VIEWER_FRAME,
+    height: VIEWER_FRAME,
+    borderRadius: VIEWER_FRAME / 2,
+    alignSelf: 'center',
+    overflow: 'hidden',
+    backgroundColor: colors.cream,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  photo: {
+    width: VIEWER_FRAME,
+    height: VIEWER_FRAME,
+  },
+  fallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.sage,
+  },
+  initial: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 96,
+    color: colors.white,
+  },
+  emptyHint: {
+    ...typography.caption,
+    textAlign: 'center',
+    color: colors.textMuted,
+  },
+  actions: {
+    gap: spacing.sm,
+  },
+});
 
 type AvatarPreviewModalProps = {
   visible: boolean;
