@@ -1,14 +1,13 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../src/components/Avatar';
 import { Button } from '../src/components/Button';
 import { Card } from '../src/components/Card';
 import { GoalPicker, type GoalOption } from '../src/components/GoalPicker';
 import { InputField } from '../src/components/InputField';
-import { PrimaryActionBar } from '../src/components/PrimaryActionBar';
 import { Screen } from '../src/components/Screen';
 import { ScreenHeader } from '../src/components/ScreenHeader';
 import { Section } from '../src/components/Section';
@@ -17,7 +16,7 @@ import { DEFAULT_DAILY_GOALS, type ProfileGoal } from '../src/features/profile';
 import { hasSupabase } from '../src/lib/env';
 import { useAppStore } from '../src/store/useAppStore';
 import { colors } from '../src/theme/colors';
-import { radius, spacing } from '../src/theme/tokens';
+import { elevation, radius, spacing } from '../src/theme/tokens';
 import { typography } from '../src/theme/typography';
 
 const GOAL_OPTIONS: GoalOption[] = [
@@ -47,8 +46,7 @@ const MORE_OPTIONS = [
   { key: 'back', label: 'Voltar' },
 ] as const;
 
-/** PrimaryActionBar body (padding + button); safe-area inset is on the bar itself. */
-const SAVE_ACTION_HEIGHT = spacing.md + 44 + spacing.md;
+const SAVED_FEEDBACK_MS = 2500;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -64,19 +62,42 @@ export default function ProfileScreen() {
   const [restrictions, setRestrictions] = useState(profile.restrictions);
   const [dailyGoals, setDailyGoals] = useState({ ...profile.dailyGoals });
   const [saved, setSaved] = useState(false);
+  const [pickingPhoto, setPickingPhoto] = useState(false);
 
-  const footerSpace =
-    SAVE_ACTION_HEIGHT + Math.max(insets.bottom, spacing.md) + spacing.lg;
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), SAVED_FEEDBACK_MS);
+    return () => clearTimeout(timer);
+  }, [saved]);
 
   async function pickAvatar() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-      allowsEditing: true,
-      aspect: [1, 1],
-    });
-    if (!result.canceled && result.assets[0]) {
-      updateProfile({ avatarUri: result.assets[0].uri });
+    if (pickingPhoto) return;
+    setPickingPhoto(true);
+    try {
+      if (Platform.OS !== 'web') {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert(
+            'Galeria necessária',
+            'Permita o acesso às fotos nas configurações do dispositivo para alterar sua foto de perfil.',
+          );
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.7,
+        allowsEditing: Platform.OS !== 'web',
+        aspect: [1, 1],
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        updateProfile({ avatarUri: result.assets[0].uri });
+        setSaved(false);
+      }
+    } finally {
+      setPickingPhoto(false);
     }
   }
 
@@ -114,19 +135,30 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <Screen footerSpace={footerSpace}>
+      <Screen>
         <ScreenHeader title="Perfil" subtitle="Seus dados e metas" />
 
         <Section title="Identidade">
           <Card flat style={styles.profileCard}>
             <View style={styles.avatarRow}>
-              <Pressable onPress={pickAvatar} accessibilityRole="button">
-                <Avatar uri={profile.avatarUri} name={profile.displayName} size={72} />
-              </Pressable>
+              <Avatar
+                uri={profile.avatarUri}
+                name={profile.displayName}
+                size={72}
+                onPress={pickAvatar}
+              />
               <View style={styles.avatarMeta}>
                 <Text style={typography.subtitle}>{profile.displayName || 'Sem nome'}</Text>
-                <Pressable onPress={pickAvatar} hitSlop={8}>
-                  <Text style={styles.changePhoto}>Alterar foto</Text>
+                <Pressable
+                  onPress={pickAvatar}
+                  disabled={pickingPhoto}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Alterar foto de perfil"
+                >
+                  <Text style={styles.changePhoto}>
+                    {pickingPhoto ? 'Abrindo galeria…' : 'Alterar foto'}
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -158,17 +190,17 @@ export default function ProfileScreen() {
             <Text style={typography.label}>Metas diárias</Text>
             <View style={styles.macroGrid}>
               {MACRO_FIELDS.map((field) => (
-                <View key={field.key} style={styles.macroCell}>
-                  <Text style={[styles.macroCellLabel, { color: field.color }]}>{field.label}</Text>
-                  <View style={styles.macroInputBox}>
+                <View key={field.key} style={styles.macroBlock}>
+                  <Text style={[styles.macroBlockLabel, { color: field.color }]}>{field.label}</Text>
+                  <View style={styles.macroBlockRow}>
                     <TextInput
-                      style={styles.macroInput}
+                      style={styles.macroBlockInput}
                       keyboardType="numeric"
                       value={String(dailyGoals[field.key])}
                       onChangeText={(t) => setMacro(field.key, t)}
                       accessibilityLabel={`${field.a11yLabel}, ${dailyGoals[field.key]} ${field.unit}`}
                     />
-                    <Text style={styles.macroSuffix}>{field.unit}</Text>
+                    <Text style={styles.macroBlockUnit}>{field.unit}</Text>
                   </View>
                 </View>
               ))}
@@ -267,10 +299,16 @@ export default function ProfileScreen() {
         </Section>
       </Screen>
 
-      <PrimaryActionBar
-        label={saved ? 'Salvo ✓' : 'Salvar alterações'}
-        onPress={handleSave}
-      />
+      <View
+        style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
+        pointerEvents="box-none"
+      >
+        <Button
+          label={saved ? 'Salvo ✓' : 'Salvar alterações'}
+          onPress={handleSave}
+          style={styles.saveBarBtn}
+        />
+      </View>
     </View>
   );
 }
@@ -310,47 +348,46 @@ const styles = StyleSheet.create({
   macroGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
+    rowGap: spacing.sm,
     marginTop: spacing.sm,
   },
-  macroCell: {
-    flexGrow: 1,
-    flexBasis: '46%',
-    minWidth: 140,
-  },
-  macroCellLabel: {
-    fontFamily: 'Outfit_600SemiBold',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: spacing.xs,
-  },
-  macroInputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  macroBlock: {
+    width: '48%',
     backgroundColor: colors.cream,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.sm,
-    minHeight: 44,
+    padding: spacing.sm,
+    overflow: 'hidden',
   },
-  macroInput: {
+  macroBlockLabel: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: spacing.xs,
+  },
+  macroBlockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 36,
+  },
+  macroBlockInput: {
     flex: 1,
+    minWidth: 0,
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 16,
     color: colors.forest,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     textAlign: 'right',
   },
-  macroSuffix: {
+  macroBlockUnit: {
     fontFamily: 'Outfit_500Medium',
     fontSize: 12,
     color: colors.textMuted,
     marginLeft: spacing.xs,
-    minWidth: 28,
-    textAlign: 'right',
+    flexShrink: 0,
   },
   defaultsLink: {
     alignSelf: 'flex-start',
@@ -423,5 +460,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     lineHeight: 24,
     marginLeft: spacing.sm,
+  },
+  saveBar: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    backgroundColor: colors.white,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    ...elevation.bar,
+  },
+  saveBarBtn: {
+    width: '100%',
   },
 });

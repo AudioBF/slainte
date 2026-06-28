@@ -21,6 +21,7 @@ export function Avatar({ uri, name, size = 44, onPress, variant = 'default' }: P
   const content = hasPhoto ? (
     <Image
       source={{ uri: uri! }}
+      contentFit="cover"
       style={{
         width: size,
         height: size,

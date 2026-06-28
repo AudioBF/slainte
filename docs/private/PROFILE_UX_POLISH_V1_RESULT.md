@@ -1,7 +1,7 @@
 # Profile UX Polish v1 — Result
 
 **Date:** 2026-06-28  
-**Status:** `PENDING MANUAL SMOKE`  
+**Status:** `PATCH APPLIED` — awaiting manual re-smoke post-deploy  
 **Scope:** UX/layout only on the Perfil screen — no store, auth, Edge, IA, schema, env, or other flows.
 
 ---
@@ -22,45 +22,49 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 ---
 
-## Files changed
+## Regressions found (2026-06-28 smoke)
 
-| File | Change |
+| Issue | Symptom |
 |---|---|
-| `app/profile.tsx` | Profile UX polish — layout, macro grid, cards, footer clearance, list-style actions |
-| `docs/private/PROFILE_UX_POLISH_V1_RESULT.md` | This document |
+| Macro grid | Labels/units visually outside bordered areas; `g` floating past card edge on narrow widths (`flexBasis: 46%` + `minWidth: 140` overflow) |
+| Sticky save bar | After “Salvar”, screen appeared frozen — touches blocked outside the footer |
+| Alterar foto | Unreliable on native without gallery permission; nested `Pressable` on avatar; no `contentFit: cover` on preview |
 
 ---
 
-## Visual changes summary
+## Patch applied
 
-### Metas diárias (macro goals)
+| File | Change |
+|---|---|
+| `app/profile.tsx` | Unified macro blocks; docked save bar (no absolute overlay); photo picker permissions + web/native editing split; saved feedback timeout |
+| `src/components/Avatar.tsx` | `contentFit="cover"` for centered square preview (one line) |
+| `docs/private/PROFILE_UX_POLISH_V1_RESULT.md` | This document |
 
-- Replaced row layout (label left, input right) with a **2×2 grid**
-- Short labels with macro colors: Calorias, Proteína, **Carbs**, Gordura — avoids “Carboidrato” overflow
-- Unit (`kcal` / `g`) shown as a **suffix inside** the input box, right-aligned
-- Full label preserved in `accessibilityLabel` (e.g. “Carboidrato”)
+### Patch details
+
+**Macros:** Each macro is one bordered block (`macroBlock`) containing label + input row + unit. Grid uses `width: '48%'` with `overflow: 'hidden'` and `minWidth: 0` on input — no floating units.
+
+**Save bar / freeze fix:** Replaced `PrimaryActionBar` (absolute `zIndex: 100` overlay) with a **docked footer** in normal flex layout (`ScrollView` + bottom bar sibling). Removes full-screen touch interception on RN Web/Android. `saved` resets after 2.5s.
+
+**Alterar foto:** `requestMediaLibraryPermissionsAsync` on native; `allowsEditing` only when `Platform.OS !== 'web'`; guard against double-tap (`pickingPhoto`); `Avatar` uses `onPress`; loading hint “Abrindo galeria…”.
+
+**Web/PWA limitation:** Square crop UI is not available on web without new dependencies — selection works; preview uses `cover` centering.
+
+---
+
+## Original v1 visual changes (retained)
 
 ### Objetivo
 
-- Replaced `ChipGroup` with **`GoalPicker`** (same pattern as onboarding) — radio-style options with descriptions
+- `GoalPicker` (radio-style options with descriptions)
 
 ### Cards
 
-- Profile sections use **lighter cards**: `radius.xl`, hairline border, no shadow/elevation
+- Lighter cards: `radius.xl`, hairline border, no shadow
 
-### Sticky “Salvar alterações”
+### Conta e nuvem / Mais opções
 
-- **`footerSpace` is dynamic** via `useSafeAreaInsets` — bar height + safe area + buffer — so bottom content (especially “Mais opções”) is not covered
-
-### Conta e nuvem
-
-- “Gerenciar conta” and “Sair” are **list rows with chevron** instead of stacked outline buttons
-- “Entrar / Criar conta” remains a primary button when signed out
-
-### Mais opções
-
-- Three actions as a **compact list** with separators and chevron (`›`)
-- “Aplicar metas padrão do objetivo” is a **text link** (orange) instead of a full outline button
+- List rows with chevron instead of stacked outline buttons
 
 ---
 
@@ -85,20 +89,18 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 ## Manual validation checklist
 
-- [ ] Open Perfil from Hoje (avatar tap) — screen loads without layout errors
-- [ ] **Identidade** — avatar, name field, “Alterar foto” link look correct
-- [ ] **Objetivo** — `GoalPicker` selects lose / maintain / gain with descriptions
-- [ ] **Metas diárias** — 2×2 grid; no “Carboidrato” overflow on narrow mobile / PWA width
-- [ ] Macro inputs accept numeric edits; units (`kcal`, `g`) read clearly inside each field
-- [ ] “Aplicar metas padrão do objetivo” updates values for current goal
-- [ ] **Preferências** — restrictions textarea unchanged in behavior
-- [ ] **Conta e nuvem** — signed-in: email, sync hint, list rows navigate / sign out; signed-out: primary CTA to account
-- [ ] **Mais opções** — three rows tappable; chevrons visible; adequate vertical spacing
-- [ ] Scroll to bottom — **no overlap** between last row and sticky “Salvar alterações”
-- [ ] Tap **Salvar alterações** — profile persists; button shows “Salvo ✓”
-- [ ] **Rever introdução** — still resets onboarding and routes to `/onboarding`
-- [ ] Web PWA (`slainte-sigma.vercel.app` or local) — grid and footer clearance OK
-- [ ] Native safe area (home indicator) — footer padding sufficient
+- [ ] Open Perfil on **narrow mobile** width
+- [ ] **Macros** — each of Calorias / Proteína / Carbs / Gordura: label + value + unit inside same bordered block; no overflow or floating `g`/`kcal`
+- [ ] Edit calories, protein, carbs, fat — values update
+- [ ] Tap **Salvar alterações** — persists; shows “Salvo ✓” briefly then reverts label
+- [ ] **After save, screen does NOT freeze** — scroll, edit fields, open list rows
+- [ ] Scroll to bottom — **Mais opções** fully tappable; not covered by save bar
+- [ ] Tap **Alterar foto** (link and avatar) — gallery opens on native; web file picker works
+- [ ] Cancel picker — screen remains interactive; retry works
+- [ ] Select photo — preview centered (`cover`); crop when native editing supported
+- [ ] **Gerenciar conta**, **Sair**, **Mais opções** rows work after save
+- [ ] Refresh — data persists
+- [ ] Web PWA — no post-save freeze; macros layout OK
 
 ---
 
@@ -106,12 +108,13 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 | Check | Result |
 |---|---|
-| `npx tsc --noEmit` | ✅ Pass (2026-06-28) |
+| `npx tsc --noEmit` | ✅ Pass (2026-06-28 patch) |
 | `npm run lint` | N/A — no lint script in `package.json` |
 
 ---
 
 ## Notes
 
-- Local `.env` should remain `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false` — not touched in this sprint.
-- Commit intentionally deferred until manual smoke passes.
+- v1 commit: `9306c97` — `fix(profile): polish Perfil layout and macro inputs`
+- Patch commit: see `git log -1` on master
+- Local `.env` should remain `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN=false`
