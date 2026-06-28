@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 
@@ -13,32 +13,46 @@ type Props = {
 };
 
 export function Avatar({ uri, name, size = 44, onPress, variant = 'default' }: Props) {
+  const [imgLoaded, setImgLoaded] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const initial = name?.trim().charAt(0).toUpperCase() || '?';
   const onDark = variant === 'onDark';
-  const hasPhoto = Boolean(uri?.trim()) && !imgFailed;
+  const trimmedUri = uri?.trim() ?? '';
+  const hasUri = Boolean(trimmedUri);
 
-  const content = hasPhoto ? (
-    <Image
-      source={{ uri: uri! }}
-      contentFit="cover"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-      }}
-      onError={() => setImgFailed(true)}
-    />
+  useEffect(() => {
+    setImgLoaded(false);
+    setImgFailed(false);
+  }, [trimmedUri]);
+
+  const showPhoto = hasUri && !imgFailed;
+
+  const photoShellStyle = {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+  };
+
+  const content = showPhoto ? (
+    <View style={[styles.photoShell, photoShellStyle, onDark ? styles.photoShellOnDark : styles.photoShellDefault]}>
+      {!imgLoaded ? (
+        <View style={[StyleSheet.absoluteFill, styles.loadingPlaceholder, onDark && styles.loadingOnDark]} />
+      ) : null}
+      <Image
+        source={{ uri: trimmedUri }}
+        contentFit="cover"
+        transition={0}
+        style={[photoShellStyle, !imgLoaded && styles.imageHidden]}
+        onLoad={() => setImgLoaded(true)}
+        onError={() => setImgFailed(true)}
+      />
+    </View>
   ) : (
     <View
       style={[
         styles.fallback,
         onDark ? styles.fallbackOnDark : styles.fallbackDefault,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-        },
+        photoShellStyle,
       ]}
     >
       <Text
@@ -57,7 +71,8 @@ export function Avatar({ uri, name, size = 44, onPress, variant = 'default' }: P
     <View
       style={[
         styles.ring,
-        onDark && styles.ringOnDark,
+        onDark ? styles.ringOnDark : styles.ringDefault,
+        showPhoto && onDark && styles.ringOnDarkPhoto,
         { width: size + 4, height: size + 4, borderRadius: (size + 4) / 2 },
       ]}
     >
@@ -81,10 +96,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ringDefault: {
+    backgroundColor: 'transparent',
+  },
   ringOnDark: {
     borderWidth: 2,
     borderColor: colors.white,
-    backgroundColor: colors.orange,
+    backgroundColor: colors.sage,
+  },
+  ringOnDarkPhoto: {
+    backgroundColor: colors.sage,
+  },
+  photoShell: {
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoShellDefault: {
+    backgroundColor: colors.cream,
+  },
+  photoShellOnDark: {
+    backgroundColor: colors.sage,
+  },
+  loadingPlaceholder: {
+    backgroundColor: colors.cream,
+  },
+  loadingOnDark: {
+    backgroundColor: colors.sage,
+  },
+  imageHidden: {
+    opacity: 0,
   },
   fallback: {
     alignItems: 'center',
@@ -94,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sage,
   },
   fallbackOnDark: {
-    backgroundColor: colors.orange,
+    backgroundColor: colors.sage,
   },
   initial: {
     fontFamily: 'Outfit_600SemiBold',

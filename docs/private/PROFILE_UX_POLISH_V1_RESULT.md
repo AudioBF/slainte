@@ -68,6 +68,50 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 **Macros (ajuste mínimo):** `gap` no grid, `flexBasis: '47%'` + `minWidth: 0`, `overflow: 'hidden'` na row, unidade com largura fixa (`kcal` 30px / `g` 14px) — reforço do patch 1 em layouts estreitos.
 
+**Status:** ✅ corrigido em `e41fc6d` — smoke manual OK.
+
+---
+
+## PATCH 3 — AVATAR PREVIEW CONFIRMATION FLOW (2026-06-28)
+
+| Issue | Symptom |
+|---|---|
+| Foto aplicada direto | Após escolher na galeria, avatar mudava imediatamente sem prévia/confirmação |
+| Flicker laranja (Hoje) | Ao refresh em Hoje, avatar com foto piscava fundo laranja antes da imagem carregar |
+
+| File | Change |
+|---|---|
+| `app/profile.tsx` | `draftAvatarUri` + `pendingAvatarUri`; modal de prévia com Cancelar / Trocar foto / Usar foto; persistência só em Salvar; canvas crop no web |
+| `src/components/Avatar.tsx` | Fundo sage/cream neutro; sem laranja no ring/fallback com foto; loading placeholder; `transition={0}`; inicial só sem foto |
+| `docs/private/PROFILE_UX_POLISH_V1_RESULT.md` | This document |
+
+### Novo fluxo de foto
+
+1. Toque em avatar ou “Alterar foto” → galeria  
+2. Escolha da imagem → `pendingAvatarUri` + modal de prévia (não aplica ao perfil)  
+3. **Usar foto** → `draftAvatarUri` (visual no Perfil; store inalterado)  
+4. **Salvar alterações** → `updateProfile({ avatarUri: draftAvatarUri, … })`  
+5. **Cancelar** no modal → descarta pendente; mantém `draftAvatarUri` anterior  
+6. **Trocar foto** → reabre galeria sem alterar foto atual  
+
+### Native
+
+- `allowsEditing: true`, `aspect: [1, 1]`, `quality: 0.7`  
+- Modal de confirmação **mesmo após** crop nativo da galeria  
+
+### Web/PWA
+
+- Sem crop nativo do picker (`allowsEditing: false`)  
+- Modal com prévia circular, pan (↑↓←→ + centralizar) e zoom +/−  
+- Ao confirmar, export JPEG quadrado via **canvas** (`exportSquareAvatarWeb`)  
+- Ajuste limitado mas funcional; sem nova dependência  
+
+### Flicker laranja
+
+- `ringOnDark` / fallback: laranja removido → **sage** neutro  
+- Com URI: placeholder sage/cream enquanto carrega; imagem `opacity: 0` até `onLoad`  
+- Letra inicial só quando **não há foto**  
+
 ---
 
 ## Original v1 visual changes (retained)
@@ -114,8 +158,12 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 - [ ] **After save, screen does NOT freeze** — scroll, edit fields, open list rows
 - [ ] Scroll to bottom — **Mais opções** fully tappable; not covered by save bar
 - [ ] Tap **Alterar foto** (link and avatar) — gallery opens on native; web file picker works
-- [ ] Cancel picker — screen remains interactive; retry works
-- [ ] Select photo — preview centered (`cover`); crop when native editing supported
+- [ ] **Cancelar** no modal de prévia — foto anterior preservada no Perfil
+- [ ] **Trocar foto** no modal — reabre galeria sem mudar foto atual até confirmar
+- [ ] **Usar foto** — atualiza preview no Perfil (`draftAvatarUri`); store só após **Salvar alterações**
+- [ ] Native — crop da galeria + modal de confirmação antes de aplicar
+- [ ] Web — modal com pan/zoom simples; confirmar gera JPEG quadrado via canvas
+- [ ] **Hoje** — refresh com foto salva: sem flash laranja no avatar do header
 - [ ] **Gerenciar conta**, **Sair**, **Mais opções** rows work after save
 - [ ] **Voltar** (Mais opções) — antes e depois de salvar; abrindo `/profile` direto no PWA → vai para **Hoje** (`/(tabs)`)
 - [ ] Refresh — data persists
@@ -127,7 +175,7 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 | Check | Result |
 |---|---|
-| `npx tsc --noEmit` | ✅ Pass (2026-06-28 patch 2) |
+| `npx tsc --noEmit` | ✅ Pass (2026-06-28 patch 3) |
 | `npm run lint` | N/A — no lint script in `package.json` |
 
 ---
