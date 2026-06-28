@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Image as RNImage,
   Modal,
   Platform,
   Pressable,
@@ -69,37 +70,98 @@ type PreviewTransform = {
   offsetY: number;
 };
 
+type ImageDimensions = {
+  width: number;
+  height: number;
+};
+
+type AvatarCropLayout = {
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+};
+
 const DEFAULT_PREVIEW_TRANSFORM: PreviewTransform = {
   scale: 1,
   offsetX: 0,
   offsetY: 0,
 };
 
-async function exportSquareAvatarWeb(uri: string, transform: PreviewTransform): Promise<string> {
+function computeAvatarCropLayout(
+  imageWidth: number,
+  imageHeight: number,
+  transform: PreviewTransform,
+  frameSize: number,
+): AvatarCropLayout {
+  const cover = Math.max(frameSize / imageWidth, frameSize / imageHeight);
+  const drawScale = cover * transform.scale;
+  const width = imageWidth * drawScale;
+  const height = imageHeight * drawScale;
+  const left = frameSize / 2 - width / 2 + transform.offsetX;
+  const top = frameSize / 2 - height / 2 + transform.offsetY;
+  return { width, height, left, top };
+}
+
+function loadImageDimensions(uri: string): Promise<ImageDimensions> {
+  if (Platform.OS === 'web') {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = uri;
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    RNImage.getSize(
+      uri,
+      (width, height) => resolve({ width, height }),
+      (error) => reject(error),
+    );
+  });
+}
+
+async function exportCroppedAvatarUri(
+  uri: string,
+  transform: PreviewTransform,
+  imageSize: ImageDimensions,
+): Promise<string> {
+  if (Platform.OS !== 'web') {
+    return uri;
+  }
+
   return new Promise((resolve, reject) => {
     const img = document.createElement('img');
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        const size = PREVIEW_EXPORT;
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = PREVIEW_EXPORT;
+        canvas.height = PREVIEW_EXPORT;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           reject(new Error('Canvas unavailable'));
           return;
         }
-        const cover = Math.max(PREVIEW_FRAME / img.width, PREVIEW_FRAME / img.height);
-        const drawScale = cover * transform.scale;
-        const drawW = img.width * drawScale;
-        const drawH = img.height * drawScale;
-        const ratio = size / PREVIEW_FRAME;
-        const cx = size / 2 + transform.offsetX * ratio;
-        const cy = size / 2 + transform.offsetY * ratio;
+
+        const layout = computeAvatarCropLayout(
+          img.naturalWidth,
+          img.naturalHeight,
+          transform,
+          PREVIEW_FRAME,
+        );
+        const ratio = PREVIEW_EXPORT / PREVIEW_FRAME;
+
         ctx.fillStyle = colors.cream;
-        ctx.fillRect(0, 0, size, size);
-        ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        ctx.fillRect(0, 0, PREVIEW_EXPORT, PREVIEW_EXPORT);
+        ctx.drawImage(
+          img,
+          layout.left * ratio,
+          layout.top * ratio,
+          layout.width * ratio,
+          layout.height * ratio,
+        );
+        resolve(canvas.toDataURL('image/jpeg', 0.88));
       } catch (error) {
         reject(error);
       }
@@ -126,6 +188,7 @@ export default function ProfileScreen() {
   const [pickingPhoto, setPickingPhoto] = useState(false);
   const [draftAvatarUri, setDraftAvatarUri] = useState<string | null>(profile.avatarUri);
   const [pendingAvatarUri, setPendingAvatarUri] = useState<string | null>(null);
+  const [pendingImageSize, setPendingImageSize] = useState<ImageDimensions | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTransform, setPreviewTransform] = useState<PreviewTransform>(DEFAULT_PREVIEW_TRANSFORM);
   const [confirmingAvatar, setConfirmingAvatar] = useState(false);
@@ -159,10 +222,19 @@ export default function ProfileScreen() {
     return result.assets[0].uri;
   }
 
-  function openPreview(uri: string) {
+  async function openPreview(uri: string) {
     setPendingAvatarUri(uri);
+    setPendingImageSize(null);
     setPreviewTransform(DEFAULT_PREVIEW_TRANSFORM);
     setPreviewVisible(true);
+    try {
+      const size = await loadImageDimensions(uri);
+      setPendingImageSize(size);
+    } catch {
+      Alert.alert('Não foi possível abrir a foto', 'Tente escolher outra imagem.');
+      setPreviewVisible(false);
+      setPendingAvatarUri(null);
+    }
   }
 
   async function pickAvatar() {
@@ -183,7 +255,14 @@ export default function ProfileScreen() {
       const uri = await pickImageFromGallery();
       if (uri) {
         setPendingAvatarUri(uri);
+        setPendingImageSize(null);
         setPreviewTransform(DEFAULT_PREVIEW_TRANSFORM);
+        try {
+          const size = await loadImageDimensions(uri);
+          setPendingImageSize(size);
+        } catch {
+          Alert.alert('Não foi possível abrir a foto', 'Tente escolher outra imagem.');
+        }
       }
     } finally {
       setPickingPhoto(false);
@@ -193,20 +272,25 @@ export default function ProfileScreen() {
   function cancelAvatarPreview() {
     setPreviewVisible(false);
     setPendingAvatarUri(null);
+    setPendingImageSize(null);
     setPreviewTransform(DEFAULT_PREVIEW_TRANSFORM);
   }
 
   async function confirmAvatarPreview() {
     if (!pendingAvatarUri || confirmingAvatar) return;
+    if (Platform.OS === 'web' && !pendingImageSize) return;
+
     setConfirmingAvatar(true);
     try {
-      const finalUri =
-        Platform.OS === 'web'
-          ? await exportSquareAvatarWeb(pendingAvatarUri, previewTransform)
-          : pendingAvatarUri;
+      const finalUri = await exportCroppedAvatarUri(
+        pendingAvatarUri,
+        previewTransform,
+        pendingImageSize ?? { width: PREVIEW_FRAME, height: PREVIEW_FRAME },
+      );
       setDraftAvatarUri(finalUri);
       setPreviewVisible(false);
       setPendingAvatarUri(null);
+      setPendingImageSize(null);
       setPreviewTransform(DEFAULT_PREVIEW_TRANSFORM);
       setSaved(false);
     } catch {
@@ -456,8 +540,10 @@ export default function ProfileScreen() {
       <AvatarPreviewModal
         visible={previewVisible}
         uri={pendingAvatarUri}
+        imageSize={pendingImageSize}
         transform={previewTransform}
-        busy={pickingPhoto || confirmingAvatar}
+        pickingPhoto={pickingPhoto}
+        confirmingAvatar={confirmingAvatar}
         onCancel={cancelAvatarPreview}
         onReplace={replacePendingPhoto}
         onConfirm={confirmAvatarPreview}
@@ -472,8 +558,10 @@ export default function ProfileScreen() {
 type AvatarPreviewModalProps = {
   visible: boolean;
   uri: string | null;
+  imageSize: ImageDimensions | null;
   transform: PreviewTransform;
-  busy: boolean;
+  pickingPhoto: boolean;
+  confirmingAvatar: boolean;
   onCancel: () => void;
   onReplace: () => void;
   onConfirm: () => void;
@@ -485,8 +573,10 @@ type AvatarPreviewModalProps = {
 function AvatarPreviewModal({
   visible,
   uri,
+  imageSize,
   transform,
-  busy,
+  pickingPhoto,
+  confirmingAvatar,
   onCancel,
   onReplace,
   onConfirm,
@@ -495,6 +585,11 @@ function AvatarPreviewModal({
   onReset,
 }: AvatarPreviewModalProps) {
   const isWeb = Platform.OS === 'web';
+  const busy = pickingPhoto || confirmingAvatar;
+  const cropLayout =
+    uri && imageSize
+      ? computeAvatarCropLayout(imageSize.width, imageSize.height, transform, PREVIEW_FRAME)
+      : null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
@@ -503,27 +598,26 @@ function AvatarPreviewModal({
           <Text style={previewStyles.title}>Prévia da foto</Text>
           <Text style={previewStyles.subtitle}>
             {isWeb
-              ? 'Ajuste o enquadramento antes de usar a foto. No navegador o recorte é aproximado.'
+              ? 'Ajuste o enquadramento e confirme — o avatar usará exatamente esta área.'
               : 'Confira o recorte da galeria antes de aplicar ao perfil.'}
           </Text>
 
           <View style={previewStyles.frame}>
-            {uri ? (
-              <View
-                style={[
-                  previewStyles.imageStage,
-                  {
-                    transform: [
-                      { translateX: transform.offsetX },
-                      { translateY: transform.offsetY },
-                      { scale: transform.scale },
-                    ],
-                  },
-                ]}
-              >
-                <Image source={{ uri }} style={previewStyles.image} contentFit="cover" />
-              </View>
-            ) : null}
+            {uri && cropLayout ? (
+              <Image
+                source={{ uri }}
+                style={{
+                  position: 'absolute',
+                  width: cropLayout.width,
+                  height: cropLayout.height,
+                  left: cropLayout.left,
+                  top: cropLayout.top,
+                }}
+                contentFit="fill"
+              />
+            ) : (
+              <Text style={previewStyles.loadingHint}>Carregando prévia…</Text>
+            )}
           </View>
 
           {isWeb ? (
@@ -566,9 +660,9 @@ function AvatarPreviewModal({
               disabled={busy}
             />
             <Button
-              label={busy ? 'Aguarde…' : 'Usar foto'}
+              label={confirmingAvatar ? 'Aplicando…' : 'Usar foto'}
               onPress={onConfirm}
-              disabled={busy || !uri}
+              disabled={busy || !uri || !imageSize}
             />
           </View>
         </View>
@@ -613,14 +707,13 @@ const previewStyles = StyleSheet.create({
     backgroundColor: colors.cream,
     borderWidth: 2,
     borderColor: colors.border,
+    position: 'relative',
   },
-  imageStage: {
-    width: PREVIEW_FRAME,
-    height: PREVIEW_FRAME,
-  },
-  image: {
-    width: PREVIEW_FRAME,
-    height: PREVIEW_FRAME,
+  loadingHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: PREVIEW_FRAME / 2 - 10,
   },
   adjustBlock: {
     alignItems: 'center',

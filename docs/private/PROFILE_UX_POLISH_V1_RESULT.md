@@ -114,6 +114,29 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 ---
 
+## PATCH 4 — REAL AVATAR CROP EXPORT (2026-06-28)
+
+| Issue | Symptom |
+|---|---|
+| Preview ≠ avatar final | Zoom/pan na prévia não refletiam no avatar; web exportava math diferente da UI (`transform` + `cover` vs canvas) |
+
+| File | Change |
+|---|---|
+| `app/profile.tsx` | `computeAvatarCropLayout` compartilhado entre prévia e `exportCroppedAvatarUri`; prévia com posicionamento absoluto; export canvas 512×512 JPEG; botão “Aplicando…” |
+
+**Causa:** a prévia usava `contentFit="cover"` + `transform` no wrapper, mas “Usar foto” no web aplicava fórmula de canvas que não correspondia pixel a pixel. No native, URI original do picker era usado (OK sem controles de pan/zoom).
+
+**Correção:** uma única função `computeAvatarCropLayout(imageW, imageH, transform, frameSize)` alimenta:
+
+1. **Prévia** — `Image` posicionada com `width/height/left/top` absolutos dentro da moldura 240×240  
+2. **Export web** — mesmo layout escalado para canvas 512×512 → `dataURL` JPEG  
+
+**Native:** sem controles de enquadramento no modal; crop da galeria (`allowsEditing`) + confirmação; URI do picker aplicado ao `draftAvatarUri`.
+
+**Web/PWA:** pan/zoom alteram `PreviewTransform`; “Usar foto” chama `exportCroppedAvatarUri` **antes** de fechar o modal; avatar pequeno recebe JPEG já quadrado/cropado — `Avatar` com `contentFit="cover"` apenas exibe o quadrado final.
+
+---
+
 ## Original v1 visual changes (retained)
 
 ### Objetivo
@@ -162,7 +185,9 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 - [ ] **Trocar foto** no modal — reabre galeria sem mudar foto atual até confirmar
 - [ ] **Usar foto** — atualiza preview no Perfil (`draftAvatarUri`); store só após **Salvar alterações**
 - [ ] Native — crop da galeria + modal de confirmação antes de aplicar
-- [ ] Web — modal com pan/zoom simples; confirmar gera JPEG quadrado via canvas
+- [ ] Web — pan/zoom na prévia; **avatar no Perfil bate visualmente** com a moldura do modal após “Usar foto”
+- [ ] Web — após Salvar + refresh, enquadramento permanece igual
+- [ ] “Usar foto” mostra **Aplicando…** e só fecha modal após export
 - [ ] **Hoje** — refresh com foto salva: sem flash laranja no avatar do header
 - [ ] **Gerenciar conta**, **Sair**, **Mais opções** rows work after save
 - [ ] **Voltar** (Mais opções) — antes e depois de salvar; abrindo `/profile` direto no PWA → vai para **Hoje** (`/(tabs)`)
@@ -175,7 +200,7 @@ Out of scope: Edge Functions, IA, schema, Zustand store, auth, env flags, Meal P
 
 | Check | Result |
 |---|---|
-| `npx tsc --noEmit` | ✅ Pass (2026-06-28 patch 3) |
+| `npx tsc --noEmit` | ✅ Pass (2026-06-28 patch 4) |
 | `npm run lint` | N/A — no lint script in `package.json` |
 
 ---
