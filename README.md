@@ -2,8 +2,6 @@
 
 Personal nutrition and grocery planning app built for people living in **Dublin, Ireland**.
 
-The app interface is in **Brazilian Portuguese**, with local context for Irish supermarkets and everyday grocery shopping.
-
 **Live demo (PWA):** [slainte-sigma.vercel.app](https://slainte-sigma.vercel.app)
 
 ---
