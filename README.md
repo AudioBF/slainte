@@ -1,45 +1,59 @@
 # Sláinte
 
-App pessoal de nutrição e compras para quem vive em **Dublin, Irlanda**. Interface em **português (Brasil)**; contexto de supermercados irlandeses.
+Personal nutrition and grocery planning app built for people living in **Dublin, Ireland**.
 
-**Demo (PWA):** [slainte-sigma.vercel.app](https://slainte-sigma.vercel.app)
+The app interface is in **Brazilian Portuguese**, with local context for Irish supermarkets and everyday grocery shopping.
+
+**Live demo (PWA):** [slainte-sigma.vercel.app](https://slainte-sigma.vercel.app)
 
 ---
 
-## O que faz
+## What it does
 
-- **Hoje** — acompanhe calorias e macros do dia contra suas metas
-- **Refeição** — fotografe o prato; a IA estima nutrientes (editável antes de salvar)
-- **Dieta** — gere um cardápio semanal com IA; receitas sob demanda
-- **Compras** — lista de compras a partir do plano ou manual, por seção de mercado
-- **Mercados** — atalhos para redes na Irlanda (Lidl, Tesco, Dunnes, etc.)
-- **Perfil** — metas, restrições, foto e sync opcional na nuvem
+- **Today** — track daily calories and macros against personal goals
+- **Meal logging** — take a photo of a meal and let AI estimate nutrients before saving
+- **Diet planning** — generate a weekly meal plan with AI and request recipes on demand
+- **Shopping list** — create grocery lists from the meal plan or manually, grouped by supermarket section
+- **Markets** — quick access to Irish supermarket chains such as Lidl, Tesco, Dunnes and Aldi
+- **Profile** — manage goals, restrictions, profile photo and optional cloud sync
 
-> As estimativas de IA são educacionais. O app não substitui orientação médica ou nutricional.
+> AI-generated nutrition estimates are for educational purposes only. This app does not replace medical or nutritional advice.
+
+---
+
+## Technical highlights
+
+- AI-powered meal photo analysis through Supabase Edge Functions
+- Editable nutrition estimates before saving meals
+- Weekly AI meal planning with on-demand recipes
+- Grocery list generation grouped by supermarket section
+- Local persistence with Zustand + AsyncStorage
+- Optional cloud sync with Supabase Auth and Postgres
+- Web/PWA deployment on Vercel
 
 ---
 
 ## Stack
 
-| Camada | Tecnologia |
-|--------|------------|
+| Layer | Technology |
+|-------|------------|
 | App | [Expo SDK 56](https://docs.expo.dev/) + React Native + TypeScript |
-| Navegação | Expo Router |
-| Estado | Zustand + persist (AsyncStorage) |
-| Backend | Supabase (Auth, Postgres, Edge Functions) |
-| IA | Google Gemini (via Edge Functions) |
-| Web / PWA | React Native Web, deploy na Vercel |
+| Navigation | Expo Router |
+| State | Zustand + persist using AsyncStorage |
+| Backend | Supabase Auth, Postgres and Edge Functions |
+| AI | Google Gemini via Supabase Edge Functions |
+| Web / PWA | React Native Web, deployed on Vercel |
 
 ---
 
-## Começar
+## Getting started
 
-### Pré-requisitos
+### Prerequisites
 
 - Node.js 20+
 - npm
 
-### Instalação
+### Installation
 
 ```bash
 git clone https://github.com/AudioBF/slainte.git
@@ -48,85 +62,85 @@ npm install
 cp .env.example .env
 ```
 
-Edite `.env` com suas chaves (veja abaixo). **Nunca commite o arquivo `.env`.**
+Edit `.env` with your own keys (see below). **Never commit `.env` to Git.**
 
-### Desenvolvimento
+### Development
 
 ```bash
 npm start          # Expo dev server
-npm run web        # Abrir no navegador
-npm run android    # Android (Expo Go / emulador)
+npm run web        # Run in the browser
+npm run android    # Android (Expo Go / emulator)
 npm run ios        # iOS (macOS)
 ```
 
-### Build web (PWA)
+### Web build (PWA)
 
 ```bash
 npm run build:web
 ```
 
-Saída em `dist/`.
+Output is written to `dist/`.
 
 ---
 
-## Variáveis de ambiente
+## Environment variables
 
-Copie de [`.env.example`](.env.example). Valores vazios = modo mock / sem nuvem.
+Copy from [`.env.example`](.env.example). Empty values enable mock mode or run without cloud sync.
 
-| Variável | Uso |
-|----------|-----|
-| `EXPO_PUBLIC_AI_MOCK` | `true` (padrão) = dados simulados; `false` = IA real |
-| `EXPO_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Chave **anon** do Supabase (pública no client) |
-| `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` | `true` = cardápio via Edge Function |
-| `EXPO_PUBLIC_GEMINI_API_KEY` | Opcional / legado — preferir Edge + secret no Supabase |
+| Variable | Purpose |
+|----------|---------|
+| `EXPO_PUBLIC_AI_MOCK` | `true` (default) = mock data; `false` = real AI |
+| `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase **anon** key (public in the client) |
+| `EXPO_PUBLIC_USE_EDGE_MEAL_PLAN` | `true` = meal plan via Edge Function |
+| `EXPO_PUBLIC_GEMINI_API_KEY` | Optional / legacy — prefer Edge + Supabase secrets |
 
-**Segredos que não devem ir no client nem no Git:**
+**Secrets that must not go in the client or in Git:**
 
-- `GEMINI_API_KEY` — configurar como secret no Supabase (`supabase secrets set`)
-- Service role key do Supabase
-- Qualquer `.env` com valores reais
+- `GEMINI_API_KEY` — set as a Supabase secret (`supabase secrets set`)
+- Supabase service role key
+- Any `.env` file with real credentials
 
-Schema do banco: [`supabase/schema.sql`](supabase/schema.sql) (SQL Editor do Supabase).
+Database schema: [`supabase/schema.sql`](supabase/schema.sql) (run in the Supabase SQL Editor).
 
 ---
 
-## Scripts úteis
+## Useful scripts
 
 ```bash
-npm run build:web       # Export web + patch PWA
-npm run test:supabase     # Smoke test de conexão Supabase
-npm run test:gemini       # Smoke test Gemini (se chave no .env)
-npm run generate:icons    # Regenerar ícones PWA
+npm run build:web       # Web export + PWA HTML patch
+npm run test:supabase   # Supabase connection smoke test
+npm run test:gemini     # Gemini smoke test (requires key in .env)
+npm run generate:icons  # Regenerate PWA icons
 ```
 
 ---
 
-## Estrutura (resumo)
+## Project structure (overview)
 
 ```
-app/           # Rotas Expo Router (tabs, modais)
+app/           # Expo Router routes (tabs, modals)
 src/
-  components/  # UI compartilhada
-  features/    # Auth, dieta, refeição, compras…
-  services/    # IA, Supabase, storage
+  components/  # Shared UI
+  features/    # Auth, diet, meals, shopping, etc.
+  services/    # AI, Supabase, storage
   store/       # Zustand
 supabase/      # schema.sql + Edge Functions
 ```
 
 ---
 
-## Segurança e repositório público
+## Repository safety (public portfolio)
 
-- `.env` e `*.env.local` estão no [`.gitignore`](.gitignore)
-- Use apenas [`.env.example`](.env.example) como modelo — sem valores reais
-- Não commite chaves de API, tokens, dumps de smoke ou builds (`dist/`, `dist-preview-edge/`)
-- Documentação operacional interna fica em `docs/private/` (não deve ser publicada)
+- `.env` and `*.env.local` are listed in [`.gitignore`](.gitignore)
+- Use [`.env.example`](.env.example) only as a template — no real values
+- Do not commit API keys, tokens, smoke dumps or build output (`dist/`, `dist-preview-edge/`)
+- Internal operational notes belong in `docs/private/` (not published)
 
-Se você forkar o projeto, crie **seu próprio** projeto Supabase e configure os secrets lá.
+To run your own instance, create a **separate** Supabase project and configure secrets there.
 
 ---
 
-## Licença
+## License
 
-Ver [LICENSE](LICENSE).
+This repository is shared for **portfolio and demonstration purposes only**. See [LICENSE](LICENSE).

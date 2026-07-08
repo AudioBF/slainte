@@ -36,6 +36,7 @@ yarn-error.*
 .env*.local
 
 # internal ops docs and smoke artifacts (do not publish)
+/docs/private/
 docs/private/
 
 # local planning scratch
