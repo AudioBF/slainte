@@ -35,9 +35,26 @@ yarn-error.*
 .env
 .env*.local
 
-# local planning docs (not for commit/deploy)
+# internal ops docs and smoke artifacts (do not publish)
+docs/private/
+
+# local planning scratch
 .local/
 supabase/.temp/
+
+# ephemeral scripts output (canaries, smokes, debug)
+scripts/.meal-plan*
+scripts/.preview*
+scripts/.prod*
+scripts/.post*
+scripts/.recheck*
+scripts/.rollout*
+scripts/.shop*
+scripts/smoke-ux-sweep-prod.mjs
+.phase3-*.json
+
+# preview build output
+dist-preview-edge/
 
 # typescript
 *.tsbuildinfo
