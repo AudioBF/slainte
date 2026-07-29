@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AiBadge } from '../../src/components/AiBadge';
 import { AiLoadingSkeleton } from '../../src/components/AiLoadingSkeleton';
 import { Button } from '../../src/components/Button';
@@ -15,7 +15,8 @@ import { StatPill } from '../../src/components/StatPill';
 import { MEAL_PLAN_MESSAGES, RECIPE_MESSAGES } from '../../src/constants/ai-messages';
 import { useMealPlanGenerator, useRecipeGenerator } from '../../src/features/diet';
 import { hapticSuccess } from '../../src/lib/haptics';
-import type { ProfileGoal } from '../../src/features/profile';
+import { DEFAULT_DAILY_GOALS, type ProfileGoal } from '../../src/features/profile';
+import { resolveGoalChangePatch } from '../../src/domain/nutrition-targets';
 import { useToast } from '../../src/components/ToastProvider';
 import { isPlannedMealLoggedToday, todayDayIndex } from '../../src/store/selectors';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -29,6 +30,12 @@ const GOAL_OPTIONS = [
   { value: 'maintain', label: 'Manutenção' },
   { value: 'gain', label: 'Hipertrofia' },
 ] as const satisfies readonly { value: ProfileGoal; label: string }[];
+
+const GOAL_LABEL: Record<ProfileGoal, string> = {
+  lose: 'Emagrecimento',
+  maintain: 'Manutenção',
+  gain: 'Hipertrofia',
+};
 
 const SLOT_LABELS: Record<string, string> = {
   breakfast: 'Café da manhã',
@@ -115,6 +122,32 @@ export default function DietScreen() {
     router.push(`/recipe/${result.recipe.id}`);
   }
 
+  function handleGoalChange(nextGoal: ProfileGoal) {
+    if (nextGoal === profile.goal) return;
+
+    Alert.alert(
+      'Alterar objetivo',
+      `Você escolheu ${GOAL_LABEL[nextGoal]}. Deseja manter suas metas diárias atuais ou aplicar os padrões desse objetivo? Cancelar não altera nada.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Manter minhas metas atuais',
+          onPress: () => {
+            const patch = resolveGoalChangePatch(nextGoal, 'keep_targets', DEFAULT_DAILY_GOALS);
+            if (patch) updateProfile(patch);
+          },
+        },
+        {
+          text: 'Aplicar padrões',
+          onPress: () => {
+            const patch = resolveGoalChangePatch(nextGoal, 'apply_defaults', DEFAULT_DAILY_GOALS);
+            if (patch) updateProfile(patch);
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <Screen>
       <ScreenHeader title="Dieta" subtitle="Planeje a semana — receitas quando você quiser" />
@@ -132,7 +165,7 @@ export default function DietScreen() {
           <ChipGroup
             options={GOAL_OPTIONS}
             value={profile.goal}
-            onChange={(g) => updateProfile({ goal: g as ProfileGoal })}
+            onChange={(g) => handleGoalChange(g as ProfileGoal)}
           />
 
           <InputField
@@ -141,7 +174,7 @@ export default function DietScreen() {
             numberOfLines={3}
             value={restrictions}
             onChangeText={setRestrictions}
-            placeholder="4 refeições no dia, sem glúten, intolerâncias..."
+            placeholder="Alergias, restrições, alimentos preferidos ou evitados, número de refeições…"
           />
 
           <Button

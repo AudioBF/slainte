@@ -6,7 +6,7 @@ export const mockProfile: UserProfile = {
   dailyGoals: {
     calories: 2100,
     protein: 140,
-    carbs: 220,
+    carbs: 239,
     fat: 65,
   },
 };

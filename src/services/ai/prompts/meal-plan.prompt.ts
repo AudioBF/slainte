@@ -14,8 +14,8 @@ Escreva como um humano — nomes apetitosos, rotação inteligente, nada de plan
 
 ## Perfil
 - Objetivo: ${GOAL_LABELS[profile.goal]}
-- Meta diária: ${profile.dailyGoals.calories} kcal · P ${profile.dailyGoals.protein}g · C ${profile.dailyGoals.carbs}g · G ${profile.dailyGoals.fat}g
-- Restrições: ${profile.restrictions || 'nenhuma informada'}
+- Meta diária (fonte de verdade; valores Atwater-consistentes): ${profile.dailyGoals.calories} kcal · P ${profile.dailyGoals.protein}g · C ${profile.dailyGoals.carbs}g · G ${profile.dailyGoals.fat}g
+- Preferências e restrições alimentares: ${profile.restrictions || 'nenhuma informada'}
 
 ## Formato da resposta (IMPORTANTE)
 - Retorne APENAS plannedMeals + summary.
@@ -41,10 +41,10 @@ Exemplo ERRADO (nunca faça):
 4. Nomes descritivos o bastante para compras: inclua proteína + base + preparo (ex: "Bowl de frango grelhado, arroz integral e brócolis")
 5. Ingredientes encontrados em Lidl, Aldi, Tesco, Dunnes, SuperValu
 6. Horários realistas (HH:MM, 24h)
-7. Macros por refeição coerentes com a meta diária (soma diária ~meta)
+7. Macros por refeição coerentes com a meta diária acima (soma diária ~meta; calorias e macros já são consistentes entre si)
 8. Textos em português brasileiro natural — evite nomes genéricos como "Refeição 1"
 9. Campo "summary": 2–3 frases humanas explicando a lógica da semana
-10. Respeite restrições alimentares rigorosamente
+10. Respeite restrições e preferências alimentares rigorosamente
 11. Sugestão automática — não substitui orientação médica
 
 ## Estrutura sugerida (adapte ao perfil)
