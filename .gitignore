@@ -65,3 +65,6 @@ dist-preview-edge/
 /android
 
 .vercel
+
+# Expo Go local QR (generated development artifact)
+assets/expo-go-qr.png
