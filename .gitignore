@@ -68,3 +68,9 @@ dist-preview-edge/
 
 # Expo Go local QR (generated development artifact)
 assets/expo-go-qr.png
+
+# Local QA artifacts (Playwright screenshots / reports)
+artifacts/
+dist-qa-*/
+playwright-report/
+test-results/
