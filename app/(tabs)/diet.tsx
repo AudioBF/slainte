@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AiBadge } from '../../src/components/AiBadge';
 import { AiLoadingSkeleton } from '../../src/components/AiLoadingSkeleton';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { ChipGroup } from '../../src/components/ChipGroup';
 import { DayPickerRow } from '../../src/components/DayPickerRow';
+import { GoalChangeConfirmModal } from '../../src/components/GoalChangeConfirmModal';
 import { InputField } from '../../src/components/InputField';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
@@ -16,7 +17,10 @@ import { MEAL_PLAN_MESSAGES, RECIPE_MESSAGES } from '../../src/constants/ai-mess
 import { useMealPlanGenerator, useRecipeGenerator } from '../../src/features/diet';
 import { hapticSuccess } from '../../src/lib/haptics';
 import { DEFAULT_DAILY_GOALS, type ProfileGoal } from '../../src/features/profile';
-import { resolveGoalChangePatch } from '../../src/domain/nutrition-targets';
+import {
+  resolveGoalChangePatch,
+  type GoalChangeDecision,
+} from '../../src/domain/nutrition-targets';
 import { useToast } from '../../src/components/ToastProvider';
 import { isPlannedMealLoggedToday, todayDayIndex } from '../../src/store/selectors';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -30,12 +34,6 @@ const GOAL_OPTIONS = [
   { value: 'maintain', label: 'Manutenção' },
   { value: 'gain', label: 'Hipertrofia' },
 ] as const satisfies readonly { value: ProfileGoal; label: string }[];
-
-const GOAL_LABEL: Record<ProfileGoal, string> = {
-  lose: 'Emagrecimento',
-  maintain: 'Manutenção',
-  gain: 'Hipertrofia',
-};
 
 const SLOT_LABELS: Record<string, string> = {
   breakfast: 'Café da manhã',
@@ -66,6 +64,8 @@ export default function DietScreen() {
   const mealPlanSummary = useAppStore((s) => s.mealPlanSummary);
 
   const [restrictions, setRestrictions] = useState(profile.restrictions);
+  const [pendingGoal, setPendingGoal] = useState<ProfileGoal | null>(null);
+  const [goalDecisionBusy, setGoalDecisionBusy] = useState(false);
 
   const hasPlan = plannedMeals.length > 0;
   const dayMeals = plannedMeals.filter((m) => m.dayIndex === selectedDietDay);
@@ -123,29 +123,24 @@ export default function DietScreen() {
   }
 
   function handleGoalChange(nextGoal: ProfileGoal) {
-    if (nextGoal === profile.goal) return;
+    if (nextGoal === profile.goal || goalDecisionBusy) return;
+    setPendingGoal(nextGoal);
+  }
 
-    Alert.alert(
-      'Alterar objetivo',
-      `Você escolheu ${GOAL_LABEL[nextGoal]}. Deseja manter suas metas diárias atuais ou aplicar os padrões desse objetivo? Cancelar não altera nada.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Manter minhas metas atuais',
-          onPress: () => {
-            const patch = resolveGoalChangePatch(nextGoal, 'keep_targets', DEFAULT_DAILY_GOALS);
-            if (patch) updateProfile(patch);
-          },
-        },
-        {
-          text: 'Aplicar padrões',
-          onPress: () => {
-            const patch = resolveGoalChangePatch(nextGoal, 'apply_defaults', DEFAULT_DAILY_GOALS);
-            if (patch) updateProfile(patch);
-          },
-        },
-      ],
-    );
+  function handleGoalDecision(decision: GoalChangeDecision) {
+    if (goalDecisionBusy) return;
+    setGoalDecisionBusy(true);
+    try {
+      if (!pendingGoal || decision === 'cancel') {
+        setPendingGoal(null);
+        return;
+      }
+      const patch = resolveGoalChangePatch(pendingGoal, decision, DEFAULT_DAILY_GOALS);
+      if (patch) updateProfile(patch);
+      setPendingGoal(null);
+    } finally {
+      setGoalDecisionBusy(false);
+    }
   }
 
   return (
@@ -320,6 +315,13 @@ export default function DietScreen() {
           Sugestão automática — não substitui orientação médica ou nutricional.
         </Text>
       </Card>
+
+      <GoalChangeConfirmModal
+        visible={pendingGoal !== null}
+        nextGoal={pendingGoal}
+        busy={goalDecisionBusy}
+        onDecision={handleGoalDecision}
+      />
     </Screen>
   );
 }

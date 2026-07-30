@@ -345,4 +345,39 @@ describe('resolveGoalChangePatch', () => {
       ).toBe(true);
     }
   });
+
+  it('abrir/fechar sem decisão equivale a cancel (nenhum patch)', () => {
+    expect(resolveGoalChangePatch('lose', 'cancel', DEFAULT_DAILY_GOALS)).toBeNull();
+  });
+
+  it('aplicar patch preserva restrições ao mesclar no perfil', () => {
+    const profile = {
+      goal: 'maintain' as const,
+      dailyGoals: { ...DEFAULT_DAILY_GOALS.maintain },
+      restrictions: 'sem glúten',
+    };
+    const patch = resolveGoalChangePatch('gain', 'apply_defaults', DEFAULT_DAILY_GOALS)!;
+    const next = { ...profile, ...patch };
+    expect(next.restrictions).toBe('sem glúten');
+    expect(next.goal).toBe('gain');
+    expect(next.dailyGoals).toEqual(DEFAULT_DAILY_GOALS.gain);
+  });
+
+  it('keep_targets preserva macros e restrições', () => {
+    const custom = { calories: 3000, protein: 150, carbs: 400, fat: 80 };
+    const profile = {
+      goal: 'maintain' as const,
+      dailyGoals: custom,
+      restrictions: 'alergia a amendoim',
+    };
+    const patch = resolveGoalChangePatch('lose', 'keep_targets', DEFAULT_DAILY_GOALS)!;
+    const next = {
+      ...profile,
+      ...patch,
+      dailyGoals: patch.dailyGoals ?? profile.dailyGoals,
+    };
+    expect(next.goal).toBe('lose');
+    expect(next.dailyGoals).toEqual(custom);
+    expect(next.restrictions).toBe('alergia a amendoim');
+  });
 });
