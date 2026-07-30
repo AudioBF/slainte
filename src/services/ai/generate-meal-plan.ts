@@ -1,4 +1,5 @@
 import { mockPlannedMeals } from '../../data/mock';
+import { resolveConsistentDailyGoals } from '../../domain/nutrition-targets';
 import { env, hasGeminiKey } from '../../lib/env';
 import type { UserProfile } from '../../types';
 import { generateStructuredJson } from './client';
@@ -15,6 +16,21 @@ import {
 import { validateMealPlanVariety } from './validate-meal-plan';
 
 const MAX_VARIETY_ATTEMPTS = 2;
+
+/** Garante calorias + macros Atwater-consistentes no payload (sem mutar o store). */
+function withConsistentNutritionTargets(profile: UserProfile): UserProfile {
+  const resolved = resolveConsistentDailyGoals(profile.dailyGoals);
+  if (!resolved.ok) {
+    throw new Error(
+      resolved.message ||
+        'Não foi possível alinhar as metas nutricionais para gerar o cardápio. Ajuste calorias, proteína ou gordura no perfil.',
+    );
+  }
+  return {
+    ...profile,
+    dailyGoals: resolved.goals,
+  };
+}
 
 function mockMealPlan(): MealPlanResult {
   return {
@@ -51,6 +67,8 @@ export async function generateMealPlan(
   profile: UserProfile,
   options?: { useProModel?: boolean },
 ): Promise<MealPlanResult> {
+  const nutritionProfile = withConsistentNutritionTargets(profile);
+
   if (env.aiMock) {
     await new Promise((r) => setTimeout(r, 1200));
     return mockMealPlan();
@@ -59,7 +77,7 @@ export async function generateMealPlan(
   void options;
 
   if (env.useEdgeMealPlan) {
-    const raw = await invokeGenerateMealPlan({ profile });
+    const raw = await invokeGenerateMealPlan({ profile: nutritionProfile });
     return mealPlanSchema.parse(raw);
   }
 
@@ -73,7 +91,10 @@ export async function generateMealPlan(
 
   for (let attempt = 0; attempt <= MAX_VARIETY_ATTEMPTS; attempt++) {
     try {
-      const plan = await requestMealPlan(profile, attempt > 0 ? lastIssues : undefined);
+      const plan = await requestMealPlan(
+        nutritionProfile,
+        attempt > 0 ? lastIssues : undefined,
+      );
       const validation = validateMealPlanVariety(plan);
 
       if (validation.ok) {

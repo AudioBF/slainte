@@ -109,7 +109,7 @@ export default function OnboardingScreen() {
                 label="Restrições e preferências (opcional)"
                 multiline
                 numberOfLines={4}
-                placeholder="Diabetes, sem glúten, vegetariano..."
+                placeholder="Alergias, restrições, alimentos preferidos ou evitados, observações alimentares…"
                 value={restrictions}
                 onChangeText={setRestrictions}
               />

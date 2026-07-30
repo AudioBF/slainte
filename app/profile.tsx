@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image as RNImage,
@@ -23,9 +23,15 @@ import { Screen } from '../src/components/Screen';
 import { ScreenHeader } from '../src/components/ScreenHeader';
 import { Section } from '../src/components/Section';
 import { signOut, useAuth } from '../src/features/auth';
+import {
+  calculateCarbsForCalorieTarget,
+  canSaveNutritionTargetChanges,
+  validateMacroCalorieConsistency,
+} from '../src/domain/nutrition-targets';
 import { DEFAULT_DAILY_GOALS, type ProfileGoal } from '../src/features/profile';
-import { hasSupabase } from '../src/lib/env';
+import { env } from '../src/lib/env';
 import { useAppStore } from '../src/store/useAppStore';
+import type { MacroGoals } from '../src/types';
 import { colors } from '../src/theme/colors';
 import { elevation, radius, spacing } from '../src/theme/tokens';
 import { typography } from '../src/theme/typography';
@@ -184,6 +190,8 @@ export default function ProfileScreen() {
   const [goal, setGoal] = useState<ProfileGoal>(profile.goal);
   const [restrictions, setRestrictions] = useState(profile.restrictions);
   const [dailyGoals, setDailyGoals] = useState({ ...profile.dailyGoals });
+  /** Snapshot da sessão — não depende só do store (pode mudar via sync). */
+  const baselineDailyGoalsRef = useRef<MacroGoals>({ ...profile.dailyGoals });
   const [saved, setSaved] = useState(false);
   const [pickingPhoto, setPickingPhoto] = useState(false);
   const [draftAvatarUri, setDraftAvatarUri] = useState<string | null>(profile.avatarUri);
@@ -325,6 +333,26 @@ export default function ProfileScreen() {
     }));
   }
 
+  const macroConsistency = validateMacroCalorieConsistency({
+    targetCalories: dailyGoals.calories,
+    proteinGrams: dailyGoals.protein,
+    carbsGrams: dailyGoals.carbs,
+    fatGrams: dailyGoals.fat,
+  });
+  const carbsRecalc = calculateCarbsForCalorieTarget({
+    targetCalories: dailyGoals.calories,
+    proteinGrams: dailyGoals.protein,
+    fatGrams: dailyGoals.fat,
+  });
+  const saveDecision = canSaveNutritionTargetChanges({
+    baselineGoals: baselineDailyGoalsRef.current,
+    currentGoals: dailyGoals,
+    enforceConsistency: env.useMacroConsistency,
+  });
+  const canSaveProfile = saveDecision.canSave;
+  const showEditedNutritionWarning =
+    saveDecision.nutritionChanged && !macroConsistency.isConsistent;
+
   function setMacro(key: MacroField, text: string) {
     const value = parseInt(text, 10);
     setDailyGoals((prev) => ({ ...prev, [key]: isNaN(value) ? 0 : value }));
@@ -336,14 +364,45 @@ export default function ProfileScreen() {
     setSaved(false);
   }
 
+  function recalculateCarbs() {
+    if (!carbsRecalc.isPossible || carbsRecalc.roundedCarbsGrams === null) {
+      Alert.alert(
+        'Não foi possível recalcular',
+        carbsRecalc.message ||
+          'Ajuste proteína, gordura ou calorias para tornar a meta possível.',
+      );
+      return;
+    }
+    setDailyGoals((prev) => ({
+      ...prev,
+      carbs: carbsRecalc.roundedCarbsGrams!,
+    }));
+    setSaved(false);
+  }
+
   function handleSave() {
+    const decision = canSaveNutritionTargetChanges({
+      baselineGoals: baselineDailyGoalsRef.current,
+      currentGoals: dailyGoals,
+      enforceConsistency: env.useMacroConsistency,
+    });
+    if (!decision.canSave) {
+      Alert.alert(
+        'Metas nutricionais inconsistentes',
+        `As metas nutricionais alteradas não correspondem às calorias informadas. Diferença: ${decision.consistency.differenceKcal > 0 ? '+' : ''}${decision.consistency.differenceKcal} kcal (tolerância ±${decision.consistency.toleranceKcal}). Use “Recalcular carboidratos” ou ajuste os valores.`,
+      );
+      return;
+    }
+
+    const nextGoals = { ...dailyGoals };
     updateProfile({
       displayName: name.trim() || profile.displayName,
       goal,
       restrictions: restrictions.trim(),
-      dailyGoals,
+      dailyGoals: nextGoals,
       avatarUri: draftAvatarUri,
     });
+    baselineDailyGoalsRef.current = nextGoals;
     setSaved(true);
   }
 
@@ -441,6 +500,45 @@ export default function ProfileScreen() {
                 </View>
               ))}
             </View>
+
+            {!macroConsistency.isConsistent ? (
+              <View
+                style={styles.consistencyBanner}
+                accessibilityRole="text"
+                accessibilityLabel={
+                  showEditedNutritionWarning
+                    ? 'As metas nutricionais alteradas não correspondem às calorias informadas.'
+                    : macroConsistency.message
+                }
+              >
+                <Text style={styles.consistencyTitle}>
+                  {showEditedNutritionWarning
+                    ? 'As metas nutricionais alteradas não correspondem às calorias informadas.'
+                    : 'As calorias não correspondem aos macronutrientes informados.'}
+                </Text>
+                <Text style={styles.consistencyBody}>
+                  Soma dos macros: {macroConsistency.calculatedCalories} kcal · diferença{' '}
+                  {macroConsistency.differenceKcal > 0 ? '+' : ''}
+                  {macroConsistency.differenceKcal} kcal (tolerância ±
+                  {macroConsistency.toleranceKcal}).
+                </Text>
+                {carbsRecalc.isPossible && carbsRecalc.roundedCarbsGrams !== null ? (
+                  <Pressable
+                    onPress={recalculateCarbs}
+                    style={styles.defaultsLink}
+                    accessibilityRole="button"
+                    accessibilityLabel="Recalcular carboidratos"
+                  >
+                    <Text style={styles.defaultsLinkText}>
+                      Recalcular carboidratos ({carbsRecalc.roundedCarbsGrams} g)
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text style={styles.consistencyBody}>{carbsRecalc.message}</Text>
+                )}
+              </View>
+            ) : null}
+
             <Pressable
               onPress={applyGoalDefaults}
               style={styles.defaultsLink}
@@ -454,7 +552,7 @@ export default function ProfileScreen() {
         <Section title="Preferências alimentares">
           <Card flat style={styles.profileCard}>
             <InputField
-              label="Restrições"
+              label="Restrições e preferências"
               multiline
               numberOfLines={3}
               value={restrictions}
@@ -462,7 +560,7 @@ export default function ProfileScreen() {
                 setRestrictions(t);
                 setSaved(false);
               }}
-              placeholder="Diabetes, sem glúten, intolerâncias..."
+              placeholder="Alergias, restrições, alimentos preferidos ou evitados, observações alimentares…"
             />
           </Card>
         </Section>
@@ -541,8 +639,15 @@ export default function ProfileScreen() {
         pointerEvents="box-none"
       >
         <Button
-          label={saved ? 'Salvo ✓' : 'Salvar alterações'}
+          label={
+            saved
+              ? 'Salvo ✓'
+              : !canSaveProfile
+                ? 'Corrija as metas nutricionais'
+                : 'Salvar alterações'
+          }
           onPress={handleSave}
+          disabled={!canSaveProfile}
           style={styles.saveBarBtn}
         />
       </View>
@@ -975,6 +1080,26 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_500Medium',
     fontSize: 13,
     color: colors.orange,
+  },
+  consistencyBanner: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.orange,
+    gap: spacing.xs,
+  },
+  consistencyTitle: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 13,
+    color: colors.forest,
+  },
+  consistencyBody: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 18,
   },
   cloudHint: {
     marginTop: spacing.xs,

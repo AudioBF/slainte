@@ -7,6 +7,7 @@ import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { ChipGroup } from '../../src/components/ChipGroup';
 import { DayPickerRow } from '../../src/components/DayPickerRow';
+import { GoalChangeConfirmModal } from '../../src/components/GoalChangeConfirmModal';
 import { InputField } from '../../src/components/InputField';
 import { Screen } from '../../src/components/Screen';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
@@ -15,7 +16,11 @@ import { StatPill } from '../../src/components/StatPill';
 import { MEAL_PLAN_MESSAGES, RECIPE_MESSAGES } from '../../src/constants/ai-messages';
 import { useMealPlanGenerator, useRecipeGenerator } from '../../src/features/diet';
 import { hapticSuccess } from '../../src/lib/haptics';
-import type { ProfileGoal } from '../../src/features/profile';
+import { DEFAULT_DAILY_GOALS, type ProfileGoal } from '../../src/features/profile';
+import {
+  resolveGoalChangePatch,
+  type GoalChangeDecision,
+} from '../../src/domain/nutrition-targets';
 import { useToast } from '../../src/components/ToastProvider';
 import { isPlannedMealLoggedToday, todayDayIndex } from '../../src/store/selectors';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -59,6 +64,8 @@ export default function DietScreen() {
   const mealPlanSummary = useAppStore((s) => s.mealPlanSummary);
 
   const [restrictions, setRestrictions] = useState(profile.restrictions);
+  const [pendingGoal, setPendingGoal] = useState<ProfileGoal | null>(null);
+  const [goalDecisionBusy, setGoalDecisionBusy] = useState(false);
 
   const hasPlan = plannedMeals.length > 0;
   const dayMeals = plannedMeals.filter((m) => m.dayIndex === selectedDietDay);
@@ -115,6 +122,27 @@ export default function DietScreen() {
     router.push(`/recipe/${result.recipe.id}`);
   }
 
+  function handleGoalChange(nextGoal: ProfileGoal) {
+    if (nextGoal === profile.goal || goalDecisionBusy) return;
+    setPendingGoal(nextGoal);
+  }
+
+  function handleGoalDecision(decision: GoalChangeDecision) {
+    if (goalDecisionBusy) return;
+    setGoalDecisionBusy(true);
+    try {
+      if (!pendingGoal || decision === 'cancel') {
+        setPendingGoal(null);
+        return;
+      }
+      const patch = resolveGoalChangePatch(pendingGoal, decision, DEFAULT_DAILY_GOALS);
+      if (patch) updateProfile(patch);
+      setPendingGoal(null);
+    } finally {
+      setGoalDecisionBusy(false);
+    }
+  }
+
   return (
     <Screen>
       <ScreenHeader title="Dieta" subtitle="Planeje a semana — receitas quando você quiser" />
@@ -132,7 +160,7 @@ export default function DietScreen() {
           <ChipGroup
             options={GOAL_OPTIONS}
             value={profile.goal}
-            onChange={(g) => updateProfile({ goal: g as ProfileGoal })}
+            onChange={(g) => handleGoalChange(g as ProfileGoal)}
           />
 
           <InputField
@@ -141,7 +169,7 @@ export default function DietScreen() {
             numberOfLines={3}
             value={restrictions}
             onChangeText={setRestrictions}
-            placeholder="4 refeições no dia, sem glúten, intolerâncias..."
+            placeholder="Alergias, restrições, alimentos preferidos ou evitados, número de refeições…"
           />
 
           <Button
@@ -287,6 +315,13 @@ export default function DietScreen() {
           Sugestão automática — não substitui orientação médica ou nutricional.
         </Text>
       </Card>
+
+      <GoalChangeConfirmModal
+        visible={pendingGoal !== null}
+        nextGoal={pendingGoal}
+        busy={goalDecisionBusy}
+        onDecision={handleGoalDecision}
+      />
     </Screen>
   );
 }

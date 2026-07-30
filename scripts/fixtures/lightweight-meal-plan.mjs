@@ -38,7 +38,7 @@ export async function fetchPlannedMealsFromEdge(url, anon, token) {
       profile: {
         goal: 'maintain',
         restrictions: '',
-        dailyGoals: { calories: 2100, protein: 140, carbs: 220, fat: 65 },
+        dailyGoals: { calories: 2100, protein: 140, carbs: 239, fat: 65 },
       },
     }),
   });

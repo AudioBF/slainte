@@ -48,7 +48,7 @@ const { runs, delayMs } = parseArgs(process.argv);
 const profile = {
   goal: 'maintain',
   restrictions: '',
-  dailyGoals: { calories: 2100, protein: 140, carbs: 220, fat: 65 },
+  dailyGoals: { calories: 2100, protein: 140, carbs: 239, fat: 65 },
 };
 
 async function rawInvoke(token) {
