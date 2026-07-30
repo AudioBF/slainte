@@ -31,6 +31,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@types/react": "~19.2.2",
     "sharp": "^0.34.5",
     "typescript": "~6.0.3",
@@ -46,6 +47,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e:sprint1": "node scripts/qa-sprint1-e2e.mjs",
     "test:gemini": "node scripts/test-gemini.mjs",
     "test:supabase": "node scripts/test-supabase.mjs",
     "list:gemini-models": "node scripts/list-gemini-models.mjs"
