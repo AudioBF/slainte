@@ -27,6 +27,7 @@ export {
 export {
   EMPTY_DAY_TARGETS_STATE,
   EMPTY_WEEKLY_SCHEDULE,
+  createEmptyDayTargetsState,
   cloneMacroGoals,
   type DayTypeCode,
   type Weekday,
@@ -39,3 +40,10 @@ export {
   type DayTargetsState,
   type DayTargetsConfigStatus,
 } from './types';
+export {
+  DAY_TARGETS_SYNC_STATUS,
+  type DayTargetsSyncStatus,
+} from './syncStatus';
+export {
+  shouldResetDayTargetsOnUserChange,
+} from './userBoundary';

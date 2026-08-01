@@ -123,6 +123,36 @@ describe('getEffectiveTargetForDate', () => {
     expect(result.target.templateId).toBeNull();
   });
 
+  it('flag OFF com configuração inválida ainda retorna legacy goals', () => {
+    const result = getEffectiveTargetForDate({
+      dateISO: '2026-08-03',
+      flagEnabled: false,
+      legacyDailyGoals: legacy,
+      templates: [activeLong, { ...activeLong, label: 'dup' }],
+      weeklySchedule: {
+        entries: [
+          { weekday: 0, templateId: 'tpl-long' },
+          { weekday: 0, templateId: 'tpl-strength' },
+        ],
+      },
+      dateOverrides: [
+        {
+          dateISO: '2026-08-03',
+          dailyGoals: { calories: 9999, protein: 1, carbs: 1, fat: 1 },
+          source: 'date_override',
+        },
+        {
+          dateISO: '2026-08-03',
+          dailyGoals: { calories: 8888, protein: 1, carbs: 1, fat: 1 },
+          source: 'date_override',
+        },
+      ],
+    });
+    expect(result.target.source).toBe('flag_off');
+    expect(result.target.dailyGoals).toEqual(legacy);
+    expect(result.target.dailyGoals).not.toBe(legacy);
+  });
+
   it('override vence agenda', () => {
     const overrideGoals = { calories: 2800, protein: 150, carbs: 300, fat: 80 };
     const result = getEffectiveTargetForDate({

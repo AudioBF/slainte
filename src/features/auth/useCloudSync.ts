@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { shouldResetDayTargetsOnUserChange } from '../../domain/day-targets';
 import { useAuth } from './useAuth';
 import { pushToCloud, syncWithCloud } from '../../services/supabase/sync';
 import { useAppStore, useStoreHydrated } from '../../store/useAppStore';
@@ -16,6 +17,10 @@ export function useCloudSync() {
     if (!hydrated || !configured || !isSignedIn || !user) return;
 
     if (lastUserRef.current !== user.id) {
+      // Day targets ainda não syncam: limpar na troca de conta evita vazamento device-local.
+      if (shouldResetDayTargetsOnUserChange(lastUserRef.current, user.id)) {
+        useAppStore.getState().resetDayTargets();
+      }
       lastUserRef.current = user.id;
       syncWithCloud(user.id).catch(() => undefined);
     }

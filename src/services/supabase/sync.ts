@@ -1,19 +1,13 @@
-import { EMPTY_WEEKLY_SCHEDULE } from '../../domain/day-targets';
 import { getPersistedSlice, useAppStore } from '../../store/useAppStore';
-import { hasPersistedData, mergePersistedSlice, mergeProfile } from '../../store/mergePersisted';
+import {
+  hasPersistedData,
+  mergeProfile,
+  mergeWithLegacyCloudSync,
+} from '../../store/mergePersisted';
 import { getSupabase } from './client';
 import { profileToRow, rowToProfile, syncRowToSnapshot, type CloudSnapshot } from './types';
 
-/**
- * Sprint 2A: day targets vivem no Zustand/AsyncStorage.
- * `user_sync` atual não tem colunas para templates/agenda (exigiria migration).
- * No pull, campos vazios preservam o estado local via mergeDayTargets.
- */
-const CLOUD_DAY_TARGETS_PLACEHOLDER = {
-  dayTypeTemplates: [] as const,
-  weeklySchedule: EMPTY_WEEKLY_SCHEDULE,
-  dailyTargetOverrides: [] as const,
-};
+/** Day targets: `DAY_TARGETS_SYNC_STATUS = device_local_only` — sem colunas em user_sync. */
 
 export type SyncResult =
   | { ok: true; direction: 'pull' | 'push' | 'noop'; updatedAt: string }
@@ -57,7 +51,8 @@ export async function syncWithCloud(userId: string): Promise<SyncResult> {
     if (!cloudHasData && localHasData) {
       // Cloud sync row is newer but empty — keep local meals and push up.
     } else {
-      const merged = mergePersistedSlice(localSlice, {
+      // user_sync antigo / sem day-targets → merge preserva agenda local.
+      const merged = mergeWithLegacyCloudSync(localSlice, {
         profile: cloudSnapshot.profile,
         loggedMeals: cloudSnapshot.loggedMeals,
         plannedMeals: cloudSnapshot.plannedMeals,
@@ -65,9 +60,6 @@ export async function syncWithCloud(userId: string): Promise<SyncResult> {
         shopping: cloudSnapshot.shopping,
         mealPlanSummary: cloudSnapshot.mealPlanSummary,
         selectedHistoryDate: cloudSnapshot.selectedHistoryDate,
-        dayTypeTemplates: [...CLOUD_DAY_TARGETS_PLACEHOLDER.dayTypeTemplates],
-        weeklySchedule: CLOUD_DAY_TARGETS_PLACEHOLDER.weeklySchedule,
-        dailyTargetOverrides: [...CLOUD_DAY_TARGETS_PLACEHOLDER.dailyTargetOverrides],
       });
 
       useAppStore.getState().replacePersistedState(merged);

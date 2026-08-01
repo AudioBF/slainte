@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { mockMarkets } from '../data/mock';
 import {
-  EMPTY_WEEKLY_SCHEDULE,
+  createEmptyDayTargetsState,
   type DailyNutritionTarget,
   type DayTypeTemplate,
   type WeeklySchedule,
@@ -115,9 +115,7 @@ export const useAppStore = create<AppState>()(
       plannedMeals: [],
       shopping: [],
       recipes: [],
-      dayTypeTemplates: [],
-      weeklySchedule: EMPTY_WEEKLY_SCHEDULE,
-      dailyTargetOverrides: [],
+      ...createEmptyDayTargetsState(),
       markets: mockMarkets,
       photoDraft: null,
       selectedDietDay: todayDayIndex(),
@@ -288,12 +286,7 @@ export const useAppStore = create<AppState>()(
 
       setDailyTargetOverrides: (overrides) => set({ dailyTargetOverrides: overrides }),
 
-      resetDayTargets: () =>
-        set({
-          dayTypeTemplates: [],
-          weeklySchedule: EMPTY_WEEKLY_SCHEDULE,
-          dailyTargetOverrides: [],
-        }),
+      resetDayTargets: () => set(createEmptyDayTargetsState()),
 
       setSelectedDietDay: (day) => set({ selectedDietDay: day }),
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -441,6 +434,8 @@ export const useAppStore = create<AppState>()(
       name: STORAGE_KEYS.appState,
       storage: createJSONStorage(() => AsyncStorage),
       version: APP.storageVersion,
+      // storageVersion permanece 2: campos day-targets são aditivos.
+      // Normalização defensiva via merge (mesmo version) + migrate (se version mudar).
       migrate: (persisted, _version) => {
         const state = persisted as Partial<PersistedSlice & { profile?: Partial<UserAccount> }>;
         const profile: UserAccount = {
@@ -458,6 +453,14 @@ export const useAppStore = create<AppState>()(
           ...normalizeDayTargetsFields(state),
         } as PersistedSlice;
       },
+      merge: (persisted, current) => {
+        const state = (persisted ?? {}) as Partial<PersistedSlice>;
+        return {
+          ...current,
+          ...state,
+          ...normalizeDayTargetsFields(state),
+        };
+      },
       partialize: (s) => ({
         profile: s.profile,
         loggedMeals: s.loggedMeals,
@@ -466,6 +469,7 @@ export const useAppStore = create<AppState>()(
         shopping: s.shopping,
         mealPlanSummary: s.mealPlanSummary,
         selectedHistoryDate: s.selectedHistoryDate,
+        // Day targets: device-local only (DAY_TARGETS_SYNC_STATUS). Not in user_sync.
         dayTypeTemplates: s.dayTypeTemplates,
         weeklySchedule: s.weeklySchedule,
         dailyTargetOverrides: s.dailyTargetOverrides,

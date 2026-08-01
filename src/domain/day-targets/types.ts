@@ -78,6 +78,10 @@ export type DayTargetsConfigStatus =
   | 'inactive_template'
   | 'missing_template';
 
+/**
+ * Constantes de referência (não mutar).
+ * Em runtime, preferir sempre `createEmptyDayTargetsState()` para novas refs.
+ */
 export const EMPTY_WEEKLY_SCHEDULE: WeeklySchedule = { entries: [] };
 
 export const EMPTY_DAY_TARGETS_STATE: DayTargetsState = {
@@ -85,6 +89,15 @@ export const EMPTY_DAY_TARGETS_STATE: DayTargetsState = {
   weeklySchedule: EMPTY_WEEKLY_SCHEDULE,
   dailyTargetOverrides: [],
 };
+
+/** Novo estado vazio sem partilhar referências com constantes. */
+export function createEmptyDayTargetsState(): DayTargetsState {
+  return {
+    dayTypeTemplates: [],
+    weeklySchedule: { entries: [] },
+    dailyTargetOverrides: [],
+  };
+}
 
 export function cloneMacroGoals(goals: MacroGoals): MacroGoals {
   return {
