@@ -23,6 +23,12 @@ export function sumMacros(meals: LoggedMeal[]): MacroTotals {
   };
 }
 
+/**
+ * Data “hoje” via UTC (`toISOString`).
+ * Para meta por tipo de dia / data civil em Dublin, usar
+ * `getDublinDateISO` em `src/domain/day-targets` (Sprint 2A).
+ * Migração ampla de `todayISO` fica para integração 2C.
+ */
 export function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }

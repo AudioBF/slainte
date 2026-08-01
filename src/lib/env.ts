@@ -14,10 +14,16 @@
  * - ação manual “Recalcular carboidratos”;
  * - normalização determinística do payload do gerador de cardápio (proteção interna,
  *   sem mutar o store; meta impossível falha com erro controlado).
+ *
+ * EXPO_PUBLIC_USE_DAY_TARGETS (default OFF — só ON com "true"):
+ * - Domínio pronto no Sprint 2A; UI ainda não consome (2B/2C).
+ * - OFF: resolução usa profile.dailyGoals (source flag_off).
  */
+import { parseDayTargetsFlag } from '../domain/day-targets';
 import { parseMacroConsistencyFlag } from './parseMacroConsistencyFlag';
 
 export { parseMacroConsistencyFlag } from './parseMacroConsistencyFlag';
+export { parseDayTargetsFlag } from '../domain/day-targets';
 
 export const env = {
   geminiApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '',
@@ -26,6 +32,7 @@ export const env = {
   useMacroConsistency: parseMacroConsistencyFlag(
     process.env.EXPO_PUBLIC_USE_MACRO_CONSISTENCY,
   ),
+  useDayTargets: parseDayTargetsFlag(process.env.EXPO_PUBLIC_USE_DAY_TARGETS),
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
   isDev: __DEV__,

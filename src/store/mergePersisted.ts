@@ -1,3 +1,10 @@
+import {
+  EMPTY_DAY_TARGETS_STATE,
+  EMPTY_WEEKLY_SCHEDULE,
+  type DailyNutritionTarget,
+  type DayTypeTemplate,
+  type WeeklySchedule,
+} from '../domain/day-targets';
 import type { UserAccount } from '../features/profile/types';
 import type { LoggedMeal, PlannedMeal, Recipe, ShoppingItem } from '../types';
 
@@ -9,7 +16,45 @@ export type PersistedSlice = {
   shopping: ShoppingItem[];
   mealPlanSummary: string | null;
   selectedHistoryDate: string;
+  dayTypeTemplates: DayTypeTemplate[];
+  weeklySchedule: WeeklySchedule;
+  dailyTargetOverrides: DailyNutritionTarget[];
 };
+
+export function normalizeWeeklySchedule(value: unknown): WeeklySchedule {
+  if (!value || typeof value !== 'object') {
+    return { entries: [] };
+  }
+  const schedule = value as WeeklySchedule;
+  const entries = Array.isArray(schedule.entries)
+    ? schedule.entries.map((entry) => ({ ...entry }))
+    : [];
+  const normalized: WeeklySchedule = { entries };
+  if (typeof schedule.effectiveFrom === 'string') {
+    normalized.effectiveFrom = schedule.effectiveFrom;
+  }
+  return normalized;
+}
+
+export function normalizeDayTargetsFields(
+  partial: Partial<PersistedSlice> | null | undefined,
+): Pick<PersistedSlice, 'dayTypeTemplates' | 'weeklySchedule' | 'dailyTargetOverrides'> {
+  return {
+    dayTypeTemplates: Array.isArray(partial?.dayTypeTemplates)
+      ? partial!.dayTypeTemplates.map((t) => ({
+          ...t,
+          dailyGoals: { ...t.dailyGoals },
+        }))
+      : [...EMPTY_DAY_TARGETS_STATE.dayTypeTemplates],
+    weeklySchedule: normalizeWeeklySchedule(partial?.weeklySchedule),
+    dailyTargetOverrides: Array.isArray(partial?.dailyTargetOverrides)
+      ? partial!.dailyTargetOverrides.map((o) => ({
+          ...o,
+          dailyGoals: { ...o.dailyGoals },
+        }))
+      : [...EMPTY_DAY_TARGETS_STATE.dailyTargetOverrides],
+  };
+}
 
 export function mergeProfile(local: UserAccount, cloud: UserAccount): UserAccount {
   const cloudName = cloud.displayName?.trim() ?? '';
@@ -61,6 +106,50 @@ export function mergePlannedMeals(local: PlannedMeal[], cloud: PlannedMeal[]): P
   });
 }
 
+function dayTargetsWeight(slice: Pick<PersistedSlice, 'dayTypeTemplates' | 'weeklySchedule' | 'dailyTargetOverrides'>) {
+  return (
+    slice.dayTypeTemplates.length +
+    slice.weeklySchedule.entries.length +
+    slice.dailyTargetOverrides.length
+  );
+}
+
+/**
+ * Merge de metas por tipo de dia.
+ * Cloud sem campos (schema atual) → preserva local.
+ * Templates: union por id (local vence conflito).
+ */
+export function mergeDayTargets(
+  local: Pick<PersistedSlice, 'dayTypeTemplates' | 'weeklySchedule' | 'dailyTargetOverrides'>,
+  cloud: Pick<PersistedSlice, 'dayTypeTemplates' | 'weeklySchedule' | 'dailyTargetOverrides'>,
+): Pick<PersistedSlice, 'dayTypeTemplates' | 'weeklySchedule' | 'dailyTargetOverrides'> {
+  const localNorm = normalizeDayTargetsFields(local);
+  const cloudNorm = normalizeDayTargetsFields(cloud);
+
+  if (dayTargetsWeight(cloudNorm) === 0) {
+    return localNorm;
+  }
+  if (dayTargetsWeight(localNorm) === 0) {
+    return cloudNorm;
+  }
+
+  const byId = new Map<string, DayTypeTemplate>();
+  for (const template of cloudNorm.dayTypeTemplates) byId.set(template.id, template);
+  for (const template of localNorm.dayTypeTemplates) byId.set(template.id, template);
+
+  return {
+    dayTypeTemplates: Array.from(byId.values()),
+    weeklySchedule:
+      cloudNorm.weeklySchedule.entries.length >= localNorm.weeklySchedule.entries.length
+        ? cloudNorm.weeklySchedule
+        : localNorm.weeklySchedule,
+    dailyTargetOverrides: pickRicherArray(
+      localNorm.dailyTargetOverrides,
+      cloudNorm.dailyTargetOverrides,
+    ),
+  };
+}
+
 export function hasPersistedData(slice: Pick<PersistedSlice, 'loggedMeals' | 'plannedMeals' | 'recipes' | 'shopping'>) {
   return (
     slice.loggedMeals.length > 0 ||
@@ -71,6 +160,7 @@ export function hasPersistedData(slice: Pick<PersistedSlice, 'loggedMeals' | 'pl
 }
 
 export function mergePersistedSlice(local: PersistedSlice, cloud: PersistedSlice): PersistedSlice {
+  const dayTargets = mergeDayTargets(local, cloud);
   return {
     profile: mergeProfile(local.profile, cloud.profile),
     loggedMeals: pickRicherArray(local.loggedMeals, cloud.loggedMeals),
@@ -79,5 +169,8 @@ export function mergePersistedSlice(local: PersistedSlice, cloud: PersistedSlice
     shopping: pickRicherArray(local.shopping, cloud.shopping),
     mealPlanSummary: cloud.mealPlanSummary ?? local.mealPlanSummary,
     selectedHistoryDate: cloud.selectedHistoryDate || local.selectedHistoryDate,
+    ...dayTargets,
   };
 }
+
+export { EMPTY_DAY_TARGETS_STATE, EMPTY_WEEKLY_SCHEDULE };

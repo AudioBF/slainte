@@ -1,7 +1,19 @@
+import { EMPTY_WEEKLY_SCHEDULE } from '../../domain/day-targets';
 import { getPersistedSlice, useAppStore } from '../../store/useAppStore';
 import { hasPersistedData, mergePersistedSlice, mergeProfile } from '../../store/mergePersisted';
 import { getSupabase } from './client';
 import { profileToRow, rowToProfile, syncRowToSnapshot, type CloudSnapshot } from './types';
+
+/**
+ * Sprint 2A: day targets vivem no Zustand/AsyncStorage.
+ * `user_sync` atual não tem colunas para templates/agenda (exigiria migration).
+ * No pull, campos vazios preservam o estado local via mergeDayTargets.
+ */
+const CLOUD_DAY_TARGETS_PLACEHOLDER = {
+  dayTypeTemplates: [] as const,
+  weeklySchedule: EMPTY_WEEKLY_SCHEDULE,
+  dailyTargetOverrides: [] as const,
+};
 
 export type SyncResult =
   | { ok: true; direction: 'pull' | 'push' | 'noop'; updatedAt: string }
@@ -53,6 +65,9 @@ export async function syncWithCloud(userId: string): Promise<SyncResult> {
         shopping: cloudSnapshot.shopping,
         mealPlanSummary: cloudSnapshot.mealPlanSummary,
         selectedHistoryDate: cloudSnapshot.selectedHistoryDate,
+        dayTypeTemplates: [...CLOUD_DAY_TARGETS_PLACEHOLDER.dayTypeTemplates],
+        weeklySchedule: CLOUD_DAY_TARGETS_PLACEHOLDER.weeklySchedule,
+        dailyTargetOverrides: [...CLOUD_DAY_TARGETS_PLACEHOLDER.dailyTargetOverrides],
       });
 
       useAppStore.getState().replacePersistedState(merged);
