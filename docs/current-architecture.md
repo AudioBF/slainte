@@ -1,8 +1,13 @@
-# Sláinte — Arquitetura atual (Sprint 0)
+# Sláinte — Arquitetura atual (Sprint 0 → baseline pós–Sprint 1)
 
-**Data:** 2026-07-29  
-**Escopo:** auditoria somente leitura — nenhum comportamento de produção alterado.  
+**Data (auditoria inicial):** 2026-07-29  
+**Atualização:** 2026-08-01 — Sprint 1 concluído em produção (`dd71b78`).  
+**Escopo original:** auditoria somente leitura.  
 **Roadmap:** *Sláinte — Roadmap de Evolução Corporal e Nutrição Adaptativa*
+
+**Encerramento Sprint 1:** ver `docs/sprint-1-closure.md`.  
+**Plano Sprint 2:** ver `docs/sprint-2-plan.md`.  
+**Backlog residual:** ver `docs/backlog.md`.
 
 ---
 

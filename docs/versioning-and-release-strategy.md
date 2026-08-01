@@ -159,13 +159,24 @@ Antes de promover `feature/*` -> `master` e deployar:
 
 ---
 
-## Anexo - Rastreabilidade desta sessao (Sprint 1 - macro consistency)
+## Anexo A - Baseline pre-Sprint 1
 
 | Item | Valor |
 |---|---|
-| Commit estavel pre-Sprint-1 (`master` == `origin/master`) | `a263ed28b4abc1b4962f00a196849c4c0af37441` |
-| Branch de backup | `backup/stable-pre-sprint-1` -> `a263ed28b4abc1b4962f00a196849c4c0af37441` |
-| Tag anotada | `stable-pre-sprint-1` -> `a263ed28b4abc1b4962f00a196849c4c0af37441` |
-| Branch de feature | `feature/sprint-1-macro-consistency` |
-| Commit do Sprint 1 | `feat(nutrition): add deterministic macro consistency validation` (`e153740`) |
-| Push/merge/deploy realizado nesta sessao | Nenhum - todas as operacoes permaneceram locais |
+| Commit estavel pre-Sprint-1 | `a263ed28b4abc1b4962f00a196849c4c0af37441` |
+| Branch de backup | `backup/stable-pre-sprint-1` |
+| Tag anotada | `stable-pre-sprint-1` |
+
+## Anexo B - Encerramento Sprint 1 (producao aprovada)
+
+Detalhes: `docs/sprint-1-closure.md`.
+
+| Item | Valor |
+|---|---|
+| Commit de producao / baseline pos-Sprint 1 | `dd71b782188a93180b8da6f59c2938254dea623b` |
+| Tag anotada | `stable-post-sprint-1` |
+| Branch de backup | `backup/stable-post-sprint-1` |
+| Feature flag em producao | `EXPO_PUBLIC_USE_MACRO_CONSISTENCY` ausente = OFF |
+| Deploy Production | Aprovado (smoke PASS) |
+| Rollback | Nao necessario |
+| Proximo | Sprint 2 plan em `docs/sprint-2-plan.md` |
