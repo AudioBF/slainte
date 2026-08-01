@@ -3,6 +3,14 @@ import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { mockMarkets } from '../data/mock';
+import {
+  createEmptyDayTargetsState,
+  type DailyNutritionTarget,
+  type DayTypeTemplate,
+  type WeeklySchedule,
+  type WeeklyScheduleEntry,
+  type Weekday,
+} from '../domain/day-targets';
 import { DEFAULT_DAILY_GOALS, createDefaultAccount, type UserAccount } from '../features/profile/types';
 import { APP } from '../constants/app';
 import { createId } from '../lib/id';
@@ -16,6 +24,10 @@ import {
   Recipe,
   ShoppingItem,
 } from '../types';
+import {
+  normalizeDayTargetsFields,
+  type PersistedSlice,
+} from './mergePersisted';
 import {
   selectTodayActual,
   selectTodayPlanned,
@@ -42,16 +54,6 @@ function applyComponentPatch(component: MealComponent, patch: Partial<MealCompon
   }
   return roundMealComponent(updated);
 }
-
-type PersistedSlice = {
-  profile: UserAccount;
-  loggedMeals: LoggedMeal[];
-  plannedMeals: PlannedMeal[];
-  recipes: Recipe[];
-  shopping: ShoppingItem[];
-  mealPlanSummary: string | null;
-  selectedHistoryDate: string;
-};
 
 type AppState = PersistedSlice & {
   markets: typeof mockMarkets;
@@ -92,6 +94,14 @@ type AppState = PersistedSlice & {
   setShopping: (items: ShoppingItem[]) => void;
   replacePersistedState: (slice: PersistedSlice) => void;
   setLastSyncedAt: (iso: string | null) => void;
+  setDayTypeTemplates: (templates: DayTypeTemplate[]) => void;
+  upsertDayTypeTemplate: (template: DayTypeTemplate) => void;
+  removeDayTypeTemplate: (templateId: string) => void;
+  setWeeklySchedule: (schedule: WeeklySchedule) => void;
+  setWeeklyScheduleEntry: (entry: WeeklyScheduleEntry) => void;
+  removeWeeklyScheduleEntry: (weekday: Weekday) => void;
+  setDailyTargetOverrides: (overrides: DailyNutritionTarget[]) => void;
+  resetDayTargets: () => void;
   getTodayActual: () => MacroTotals;
   getTodayPlanned: () => MacroTotals;
   getWeekComparison: () => { planned: MacroTotals; actual: MacroTotals };
@@ -105,6 +115,7 @@ export const useAppStore = create<AppState>()(
       plannedMeals: [],
       shopping: [],
       recipes: [],
+      ...createEmptyDayTargetsState(),
       markets: mockMarkets,
       photoDraft: null,
       selectedDietDay: todayDayIndex(),
@@ -223,9 +234,59 @@ export const useAppStore = create<AppState>()(
 
       setShopping: (items) => set({ shopping: items }),
 
-      replacePersistedState: (slice) => set(slice),
+      replacePersistedState: (slice) =>
+        set({
+          ...slice,
+          ...normalizeDayTargetsFields(slice),
+        }),
 
       setLastSyncedAt: (iso) => set({ lastSyncedAt: iso }),
+
+      setDayTypeTemplates: (templates) => set({ dayTypeTemplates: templates }),
+
+      upsertDayTypeTemplate: (template) =>
+        set((s) => {
+          const index = s.dayTypeTemplates.findIndex((t) => t.id === template.id);
+          const dayTypeTemplates =
+            index >= 0
+              ? s.dayTypeTemplates.map((t, i) => (i === index ? template : t))
+              : [...s.dayTypeTemplates, template];
+          return { dayTypeTemplates };
+        }),
+
+      removeDayTypeTemplate: (templateId) =>
+        set((s) => ({
+          dayTypeTemplates: s.dayTypeTemplates.filter((t) => t.id !== templateId),
+          weeklySchedule: {
+            ...s.weeklySchedule,
+            entries: s.weeklySchedule.entries.filter((e) => e.templateId !== templateId),
+          },
+        })),
+
+      setWeeklySchedule: (schedule) => set({ weeklySchedule: schedule }),
+
+      setWeeklyScheduleEntry: (entry) =>
+        set((s) => {
+          const without = s.weeklySchedule.entries.filter((e) => e.weekday !== entry.weekday);
+          return {
+            weeklySchedule: {
+              ...s.weeklySchedule,
+              entries: [...without, entry],
+            },
+          };
+        }),
+
+      removeWeeklyScheduleEntry: (weekday) =>
+        set((s) => ({
+          weeklySchedule: {
+            ...s.weeklySchedule,
+            entries: s.weeklySchedule.entries.filter((e) => e.weekday !== weekday),
+          },
+        })),
+
+      setDailyTargetOverrides: (overrides) => set({ dailyTargetOverrides: overrides }),
+
+      resetDayTargets: () => set(createEmptyDayTargetsState()),
 
       setSelectedDietDay: (day) => set({ selectedDietDay: day }),
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -373,7 +434,9 @@ export const useAppStore = create<AppState>()(
       name: STORAGE_KEYS.appState,
       storage: createJSONStorage(() => AsyncStorage),
       version: APP.storageVersion,
-      migrate: (persisted, version) => {
+      // storageVersion permanece 2: campos day-targets são aditivos.
+      // Normalização defensiva via merge (mesmo version) + migrate (se version mudar).
+      migrate: (persisted, _version) => {
         const state = persisted as Partial<PersistedSlice & { profile?: Partial<UserAccount> }>;
         const profile: UserAccount = {
           ...createDefaultAccount(),
@@ -387,7 +450,16 @@ export const useAppStore = create<AppState>()(
           ...state,
           profile,
           selectedHistoryDate: state.selectedHistoryDate ?? todayISO(),
+          ...normalizeDayTargetsFields(state),
         } as PersistedSlice;
+      },
+      merge: (persisted, current) => {
+        const state = (persisted ?? {}) as Partial<PersistedSlice>;
+        return {
+          ...current,
+          ...state,
+          ...normalizeDayTargetsFields(state),
+        };
       },
       partialize: (s) => ({
         profile: s.profile,
@@ -397,6 +469,10 @@ export const useAppStore = create<AppState>()(
         shopping: s.shopping,
         mealPlanSummary: s.mealPlanSummary,
         selectedHistoryDate: s.selectedHistoryDate,
+        // Day targets: device-local only (DAY_TARGETS_SYNC_STATUS). Not in user_sync.
+        dayTypeTemplates: s.dayTypeTemplates,
+        weeklySchedule: s.weeklySchedule,
+        dailyTargetOverrides: s.dailyTargetOverrides,
       }),
     },
   ),
@@ -423,5 +499,8 @@ export function getPersistedSlice(state: AppState): PersistedSlice {
     shopping: state.shopping,
     mealPlanSummary: state.mealPlanSummary,
     selectedHistoryDate: state.selectedHistoryDate,
+    dayTypeTemplates: state.dayTypeTemplates,
+    weeklySchedule: state.weeklySchedule,
+    dailyTargetOverrides: state.dailyTargetOverrides,
   };
 }

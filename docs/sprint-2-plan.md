@@ -1,9 +1,21 @@
 # Plano técnico — Sprint 2 (Tipos de dia e metas dinâmicas)
 
-**Status:** Planejamento apenas — **não iniciado**  
-**Base de código:** pós–Sprint 1 (`stable-post-sprint-1` → `dd71b78`)  
+**Status:** Sprint **2A concluído** (domínio + persistência local + testes). 2B/2C não iniciados.  
+**Base de código:** pós–Sprint 1 (`stable-post-sprint-1` → `dd71b78`) + branch `feature/sprint-2-day-targets`  
 **Roadmap:** Tipos de dia e metas dinâmicas  
 **Dependência:** Sprint 1 concluído (domínio `nutrition-targets` + defaults Atwater)
+
+### Persistência (estado atual — 2A)
+
+- `dayTypeTemplates`, `weeklySchedule` e `dailyTargetOverrides` → **Zustand + AsyncStorage** (`DAY_TARGETS_SYNC_STATUS = device_local_only`).
+- **Não** sincronizam pelo Supabase (`user_sync` sem colunas; nenhuma migration criada).
+- Podem divergir entre dispositivos até GO de schema/sync.
+- Seed pessoal (`createPersonalDayTargetSeed`) é opcional e **não** auto-aplicado.
+
+### Sprint 2B — UI `/schedule` (quando autorizado)
+
+- Rota `/schedule` acessível pelo Perfil.
+- Enquanto o cloud sync não existir, a tela deve informar que a configuração está salva **apenas neste dispositivo** (texto provisório; evitar copy definitivo se a sincronização futura for provável).
 
 ---
 
