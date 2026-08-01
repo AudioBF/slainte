@@ -62,12 +62,16 @@ function exportIsolated(outDir, flagValue) {
   rmSync(absOut, { recursive: true, force: true });
   mkdirSync(artifacts, { recursive: true });
 
+  // EXPO_NO_DOTENV evita que o CLI recarregue `.env` local (URL/keys de produção)
+  // por cima do isolamento do QA.
   const env = {
+    EXPO_NO_DOTENV: '1',
     EXPO_PUBLIC_SUPABASE_URL: '',
     EXPO_PUBLIC_SUPABASE_ANON_KEY: '',
     EXPO_PUBLIC_USE_EDGE_MEAL_PLAN: 'false',
     EXPO_PUBLIC_AI_MOCK: 'true',
     EXPO_PUBLIC_GEMINI_API_KEY: '',
+    EXPO_PUBLIC_USE_DAY_TARGETS: '',
   };
 
   if (flagValue === undefined || flagValue === null || flagValue === '') {
