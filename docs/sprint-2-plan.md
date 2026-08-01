@@ -1,21 +1,24 @@
 # Plano técnico — Sprint 2 (Tipos de dia e metas dinâmicas)
 
-**Status:** Sprint **2A concluído** (domínio + persistência local + testes). 2B/2C não iniciados.  
-**Base de código:** pós–Sprint 1 (`stable-post-sprint-1` → `dd71b78`) + branch `feature/sprint-2-day-targets`  
+**Status:** Sprint **2A** e **2B concluídos** na branch `feature/sprint-2b-schedule-ui`. 2C não iniciado.  
+**Base de código:** `origin/master` @ `1d063a1` + UI `/schedule`  
 **Roadmap:** Tipos de dia e metas dinâmicas  
 **Dependência:** Sprint 1 concluído (domínio `nutrition-targets` + defaults Atwater)
 
-### Persistência (estado atual — 2A)
+### Persistência (estado atual — 2A/2B)
 
 - `dayTypeTemplates`, `weeklySchedule` e `dailyTargetOverrides` → **Zustand + AsyncStorage** (`DAY_TARGETS_SYNC_STATUS = device_local_only`).
 - **Não** sincronizam pelo Supabase (`user_sync` sem colunas; nenhuma migration criada).
 - Podem divergir entre dispositivos até GO de schema/sync.
-- Seed pessoal (`createPersonalDayTargetSeed`) é opcional e **não** auto-aplicado.
+- Seed pessoal (`createPersonalDayTargetSeed`) é opcional e **não** auto-aplicado (só via botão em `/schedule` com confirmação).
 
-### Sprint 2B — UI `/schedule` (quando autorizado)
+### Sprint 2B — UI `/schedule` (implementado)
 
-- Rota `/schedule` acessível pelo Perfil.
-- Enquanto o cloud sync não existir, a tela deve informar que a configuração está salva **apenas neste dispositivo** (texto provisório; evitar copy definitivo se a sincronização futura for provável).
+- Rota `/schedule` acessível pelo Perfil (“Agenda e tipos de dia”).
+- Aviso device-local + nota de que Hoje/Semana/Dieta ainda não consomem a configuração enquanto `EXPO_PUBLIC_USE_DAY_TARGETS` estiver OFF.
+- Agenda com draft + **Salvar agenda**; templates CRUD com validação Atwater; desativação bloqueada se associado; remoção limpa referências.
+- Detalhe: `docs/day-targets-schedule-ui.md`.
+- E2E: `npm run test:e2e:sprint2b`.
 
 ---
 
