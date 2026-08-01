@@ -547,6 +547,21 @@ export default function ProfileScreen() {
               <Text style={styles.defaultsLinkText}>Aplicar metas padrão do objetivo</Text>
             </Pressable>
           </Card>
+
+          <Pressable
+            onPress={() => router.push('/schedule')}
+            style={styles.scheduleLink}
+            accessibilityRole="button"
+            accessibilityLabel="Agenda e tipos de dia"
+          >
+            <View style={styles.scheduleLinkTextWrap}>
+              <Text style={styles.scheduleLinkTitle}>Agenda e tipos de dia</Text>
+              <Text style={styles.scheduleLinkBody}>
+                Configure metas diferentes para cada tipo de rotina.
+              </Text>
+            </View>
+            <Text style={styles.scheduleLinkChevron}>›</Text>
+          </Pressable>
         </Section>
 
         <Section title="Preferências alimentares">
@@ -1080,6 +1095,37 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_500Medium',
     fontSize: 13,
     color: colors.orange,
+  },
+  scheduleLink: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 56,
+  },
+  scheduleLinkTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  scheduleLinkTitle: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 15,
+    color: colors.forest,
+  },
+  scheduleLinkBody: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  scheduleLinkChevron: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 22,
+    color: colors.textMuted,
   },
   consistencyBanner: {
     marginTop: spacing.md,
