@@ -15,7 +15,7 @@ Tela de configuração em `/schedule` (entrada pelo Perfil). Permite criar templ
 
 `EXPO_PUBLIC_USE_DAY_TARGETS` permanece **OFF**.
 
-A UI `/schedule` existe com a flag OFF. Hoje, Semana e Dieta **não** leem esta configuração até o Sprint 2C + ativação explícita da flag.
+A UI `/schedule` existe com a flag OFF. **Sprint 2C** integra Hoje/Semana via selectors centrais quando a flag está ON; Dieta/cardápio permanece mono-meta até o Sprint 2C.3. Ver [day-targets-today-week.md](./day-targets-today-week.md).
 
 ## Regras de UI
 

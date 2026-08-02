@@ -16,8 +16,9 @@
  *   sem mutar o store; meta impossível falha com erro controlado).
  *
  * EXPO_PUBLIC_USE_DAY_TARGETS (default OFF — só ON com "true"):
- * - Domínio pronto no Sprint 2A; UI ainda não consome (2B/2C).
- * - OFF: resolução usa profile.dailyGoals (source flag_off).
+ * - ON: Hoje/Semana usam meta efetiva por data (override → agenda → perfil).
+ * - OFF: Hoje/Semana usam profile.dailyGoals (source flag_off); /schedule não altera metas.
+ * - Dieta/cardápio permanece mono-meta (Sprint 2C.3).
  */
 import { parseDayTargetsFlag } from '../domain/day-targets';
 import { parseMacroConsistencyFlag } from './parseMacroConsistencyFlag';

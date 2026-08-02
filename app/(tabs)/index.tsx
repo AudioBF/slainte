@@ -24,6 +24,7 @@ import {
   WeekDiagnosisCard,
 } from '../../src/features/home';
 import { SLOT_EMOJI, SLOT_LABELS } from '../../src/constants/meals';
+import { env } from '../../src/lib/env';
 import {
   formatDateLabel,
   offsetDate,
@@ -36,19 +37,26 @@ import {
   sumComponentMacros,
   todayISO,
 } from '../../src/store/selectors';
+import {
+  selectEffectiveNutritionTargetForDate,
+  selectHomeTodayISO,
+  selectWeekDiagnosisInsightsFromComparison,
+  selectWeekNutritionComparison,
+} from '../../src/store/selectors/dayTargets';
 import { useAppStore } from '../../src/store/useAppStore';
 import { colors } from '../../src/theme/colors';
-import { radius, spacing } from '../../src/theme/tokens';
+import { spacing } from '../../src/theme/tokens';
 import { typography } from '../../src/theme/typography';
 
 function DateNavigator({
   date,
+  today,
   onChange,
 }: {
   date: string;
+  today: string;
   onChange: (next: string) => void;
 }) {
-  const today = todayISO();
   const canGoForward = date < today;
 
   return (
@@ -70,6 +78,20 @@ function DateNavigator({
   );
 }
 
+function dayListSubtitle(input: {
+  status: 'future' | 'no_log' | 'logged';
+  mealCount: number;
+  calories: number | null;
+  flagOn: boolean;
+}): string {
+  if (!input.flagOn) {
+    return `${input.mealCount} refeiç${input.mealCount === 1 ? 'ão' : 'ões'} · ${input.calories ?? 0} kcal`;
+  }
+  if (input.status === 'future') return 'Dia futuro';
+  if (input.status === 'no_log') return 'Sem registro';
+  return `${input.mealCount} refeiç${input.mealCount === 1 ? 'ão' : 'ões'} · ${input.calories ?? 0} kcal`;
+}
+
 export default function TodayScreen() {
   const router = useRouter();
   const profile = useAppStore((s) => s.profile);
@@ -80,8 +102,34 @@ export default function TodayScreen() {
   const selectedHistoryDate = useAppStore((s) => s.selectedHistoryDate);
   const setSelectedHistoryDate = useAppStore((s) => s.setSelectedHistoryDate);
   const logPlannedMeal = useAppStore((s) => s.logPlannedMeal);
+  const dayTypeTemplates = useAppStore((s) => s.dayTypeTemplates);
+  const weeklySchedule = useAppStore((s) => s.weeklySchedule);
+  const dailyTargetOverrides = useAppStore((s) => s.dailyTargetOverrides);
 
-  const isToday = selectedHistoryDate === todayISO();
+  const flagOn = env.useDayTargets;
+  const displayToday = useMemo(() => selectHomeTodayISO(flagOn), [flagOn]);
+  const isToday = selectedHistoryDate === displayToday;
+
+  const effectiveTarget = useMemo(
+    () =>
+      selectEffectiveNutritionTargetForDate({
+        profile,
+        dayTypeTemplates,
+        weeklySchedule,
+        dailyTargetOverrides,
+        dateISO: selectedHistoryDate,
+        flagEnabled: flagOn,
+      }),
+    [
+      profile,
+      dayTypeTemplates,
+      weeklySchedule,
+      dailyTargetOverrides,
+      selectedHistoryDate,
+      flagOn,
+    ],
+  );
+  const dayGoals = effectiveTarget.dailyGoals;
 
   const dayMeals = useMemo(
     () => selectMealsForDate(loggedMeals, selectedHistoryDate),
@@ -89,21 +137,57 @@ export default function TodayScreen() {
   );
   const dayActual = useMemo(
     () =>
-      isToday
+      isToday && !flagOn
         ? selectTodayActual(loggedMeals)
         : selectActualForDate(loggedMeals, selectedHistoryDate),
-    [loggedMeals, selectedHistoryDate, isToday],
+    [loggedMeals, selectedHistoryDate, isToday, flagOn],
   );
   const weekComparison = useMemo(
     () => selectWeekComparison(loggedMeals, plannedMeals),
     [loggedMeals, plannedMeals],
   );
-  const weekTrend = useMemo(
-    () => selectWeekCalorieTrend(loggedMeals),
-    [loggedMeals],
-  );
+
+  const weekNutrition = useMemo(() => {
+    if (!flagOn || viewMode !== 'week') return null;
+    return selectWeekNutritionComparison({
+      profile,
+      dayTypeTemplates,
+      weeklySchedule,
+      dailyTargetOverrides,
+      loggedMeals,
+      referenceDateISO: displayToday,
+      todayISO: displayToday,
+      flagEnabled: true,
+    });
+  }, [
+    flagOn,
+    viewMode,
+    profile,
+    dayTypeTemplates,
+    weeklySchedule,
+    dailyTargetOverrides,
+    loggedMeals,
+    displayToday,
+  ]);
+
+  const weekTrend = useMemo(() => {
+    if (flagOn && weekNutrition) {
+      return weekNutrition.perDay.map((d) =>
+        d.status === 'logged' ? (d.actual?.calories ?? 0) : 0,
+      );
+    }
+    return selectWeekCalorieTrend(loggedMeals);
+  }, [flagOn, weekNutrition, loggedMeals]);
+
+  const weekTrendGoals = useMemo(() => {
+    if (flagOn && weekNutrition) {
+      return weekNutrition.perDay.map((d) => d.target.dailyGoals.calories);
+    }
+    return profile.dailyGoals.calories;
+  }, [flagOn, weekNutrition, profile.dailyGoals.calories]);
+
   const weekDays = useMemo(() => selectRecentDates(7), []);
-  const weekSummaries = useMemo(
+  const weekSummariesLegacy = useMemo(
     () =>
       weekDays.map((date) => ({
         date,
@@ -123,7 +207,7 @@ export default function TodayScreen() {
     return selectPrimaryDailyInsight({
       loggedMeals,
       plannedMeals,
-      dailyGoals: profile.dailyGoals,
+      dailyGoals: dayGoals,
       profileGoal: profile.goal,
       dayMeals,
       dayActual,
@@ -134,7 +218,7 @@ export default function TodayScreen() {
     viewMode,
     loggedMeals,
     plannedMeals,
-    profile.dailyGoals,
+    dayGoals,
     profile.goal,
     dayMeals,
     dayActual,
@@ -149,12 +233,15 @@ export default function TodayScreen() {
 
   const weeklyInsights = useMemo(() => {
     if (viewMode !== 'week') return [];
+    if (flagOn && weekNutrition) {
+      return selectWeekDiagnosisInsightsFromComparison(weekNutrition);
+    }
     return selectWeeklyInsights({
       loggedMeals,
       plannedMeals,
       dailyGoals: profile.dailyGoals,
     });
-  }, [viewMode, loggedMeals, plannedMeals, profile.dailyGoals]);
+  }, [viewMode, flagOn, weekNutrition, loggedMeals, plannedMeals, profile.dailyGoals]);
 
   const showWeekComparison = useMemo(
     () => viewMode === 'week' && shouldShowWeekComparison(plannedMeals),
@@ -187,7 +274,11 @@ export default function TodayScreen() {
 
         {viewMode === 'today' ? (
           <>
-            <DateNavigator date={selectedHistoryDate} onChange={setSelectedHistoryDate} />
+            <DateNavigator
+              date={selectedHistoryDate}
+              today={displayToday}
+              onChange={setSelectedHistoryDate}
+            />
 
             {!isToday ? (
               <Card style={styles.pastHint}>
@@ -196,7 +287,7 @@ export default function TodayScreen() {
                 </Text>
                 <Button
                   label="Ir para hoje"
-                  onPress={() => setSelectedHistoryDate(todayISO())}
+                  onPress={() => setSelectedHistoryDate(displayToday)}
                   variant="outline"
                   style={{ marginTop: spacing.sm }}
                 />
@@ -215,24 +306,32 @@ export default function TodayScreen() {
             ) : null}
 
             <Card>
-              <CalorieRing current={dayActual.calories} goal={profile.dailyGoals.calories} />
+              <CalorieRing current={dayActual.calories} goal={dayGoals.calories} />
+              {flagOn && effectiveTarget.label ? (
+                <Text
+                  style={styles.targetLabel}
+                  accessibilityLabel={effectiveTarget.label}
+                >
+                  {effectiveTarget.label}
+                </Text>
+              ) : null}
               <View style={styles.macros}>
                 <MacroBar
                   label="Proteína"
                   current={dayActual.protein}
-                  goal={profile.dailyGoals.protein}
+                  goal={dayGoals.protein}
                   color={colors.protein}
                 />
                 <MacroBar
                   label="Carboidrato"
                   current={dayActual.carbs}
-                  goal={profile.dailyGoals.carbs}
+                  goal={dayGoals.carbs}
                   color={colors.carbs}
                 />
                 <MacroBar
                   label="Gordura"
                   current={dayActual.fat}
-                  goal={profile.dailyGoals.fat}
+                  goal={dayGoals.fat}
                   color={colors.fat}
                 />
                 <Text style={typography.caption}>
@@ -290,7 +389,7 @@ export default function TodayScreen() {
           <>
             <WeekDiagnosisCard insights={weeklyInsights} />
             <Card>
-              <TrendChart data={weekTrend} goal={profile.dailyGoals.calories} />
+              <TrendChart data={weekTrend} goal={weekTrendGoals} />
             </Card>
             {showWeekComparison ? (
               <Card>
@@ -301,27 +400,66 @@ export default function TodayScreen() {
             <Section title="Histórico da semana" subtitle="Toque em um dia para ver detalhes" />
 
             <Card flat>
-              {weekSummaries
-                .slice()
-                .reverse()
-                .map(({ date, actual, meals }, index, arr) => (
-                  <View
-                    key={date}
-                    style={index < arr.length - 1 ? styles.listDivider : undefined}
-                  >
-                    <ListRow
-                      title={formatDateLabel(date)}
-                      subtitle={`${meals.length} refeiç${meals.length === 1 ? 'ão' : 'ões'} · ${actual.calories} kcal`}
-                      trailing={String(actual.calories)}
-                      showChevron
-                      highlighted={date === todayISO()}
-                      onPress={() => {
-                        setSelectedHistoryDate(date);
-                        setViewMode('today');
-                      }}
-                    />
-                  </View>
-                ))}
+              {flagOn && weekNutrition
+                ? weekNutrition.perDay.map((day, index, arr) => (
+                    <View
+                      key={day.dateISO}
+                      style={index < arr.length - 1 ? styles.listDivider : undefined}
+                    >
+                      <ListRow
+                        title={formatDateLabel(day.dateISO)}
+                        subtitle={dayListSubtitle({
+                          status: day.status,
+                          mealCount: day.mealCount,
+                          calories: day.actual?.calories ?? null,
+                          flagOn: true,
+                        })}
+                        trailing={
+                          day.status === 'logged'
+                            ? String(day.actual?.calories ?? 0)
+                            : day.status === 'future'
+                              ? '—'
+                              : '—'
+                        }
+                        showChevron={day.status !== 'future'}
+                        highlighted={day.dateISO === displayToday}
+                        onPress={
+                          day.status === 'future'
+                            ? undefined
+                            : () => {
+                                setSelectedHistoryDate(day.dateISO);
+                                setViewMode('today');
+                              }
+                        }
+                      />
+                    </View>
+                  ))
+                : weekSummariesLegacy
+                    .slice()
+                    .reverse()
+                    .map(({ date, actual, meals }, index, arr) => (
+                      <View
+                        key={date}
+                        style={index < arr.length - 1 ? styles.listDivider : undefined}
+                      >
+                        <ListRow
+                          title={formatDateLabel(date)}
+                          subtitle={dayListSubtitle({
+                            status: 'logged',
+                            mealCount: meals.length,
+                            calories: actual.calories,
+                            flagOn: false,
+                          })}
+                          trailing={String(actual.calories)}
+                          showChevron
+                          highlighted={date === todayISO()}
+                          onPress={() => {
+                            setSelectedHistoryDate(date);
+                            setViewMode('today');
+                          }}
+                        />
+                      </View>
+                    ))}
             </Card>
           </>
         )}
@@ -380,6 +518,12 @@ const styles = StyleSheet.create({
   },
   macros: {
     marginTop: spacing.xl,
+  },
+  targetLabel: {
+    ...typography.caption,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    color: colors.textMuted,
   },
   listDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
