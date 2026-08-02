@@ -49,6 +49,7 @@
     "test:watch": "vitest",
     "test:e2e:sprint1": "node scripts/qa-sprint1-e2e.mjs",
     "test:e2e:sprint2b": "node scripts/qa-sprint2b-e2e.mjs",
+    "test:e2e:sprint2c": "node scripts/qa-sprint2c-e2e.mjs",
     "test:gemini": "node scripts/test-gemini.mjs",
     "test:supabase": "node scripts/test-supabase.mjs",
     "list:gemini-models": "node scripts/list-gemini-models.mjs"
