@@ -3,6 +3,8 @@ export {
   getDublinDateISO,
   isValidCivilDateISO,
 } from './getDublinDateISO';
+export { addCivilDays } from './addCivilDays';
+export { getWeekCivilDates } from './getWeekCivilDates';
 export { getDublinWeekday, jsDayToWeekday } from './getDublinWeekday';
 export { parseDayTargetsFlag } from './parseDayTargetsFlag';
 export {
