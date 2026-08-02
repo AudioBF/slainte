@@ -72,5 +72,6 @@ assets/expo-go-qr.png
 # Local QA artifacts (Playwright screenshots / reports)
 artifacts/
 dist-qa-*/
+dist-qa-sprint2b/
 playwright-report/
 test-results/
