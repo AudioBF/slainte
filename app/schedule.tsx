@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { DayTypeTemplate, Weekday } from '../src/domain/day-targets';
 import { Button } from '../src/components/Button';
@@ -22,6 +22,7 @@ import {
   schedulesEqual,
   setScheduleEntryDraft,
   weekdayLabel,
+  nextDraftAfterStoreScheduleChange,
 } from '../src/features/schedule/scheduleLogic';
 import { useAppStore } from '../src/store/useAppStore';
 import { colors } from '../src/theme/colors';
@@ -47,14 +48,21 @@ export default function ScheduleScreen() {
   const [draftSchedule, setDraftSchedule] = useState(() =>
     cloneWeeklySchedule(weeklySchedule),
   );
+  const storeScheduleBaselineRef = useRef(weeklySchedule);
   const [savedFlash, setSavedFlash] = useState(false);
   const [pickerWeekday, setPickerWeekday] = useState<Weekday | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<DayTypeTemplate | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState>(null);
 
+  // Sync draft from store only when the draft was still aligned with the previous
+  // store snapshot. Preserves unsaved agenda edits across template removal / hydrate.
   useEffect(() => {
-    setDraftSchedule(cloneWeeklySchedule(weeklySchedule));
+    const previousStore = storeScheduleBaselineRef.current;
+    storeScheduleBaselineRef.current = weeklySchedule;
+    setDraftSchedule((draft) =>
+      nextDraftAfterStoreScheduleChange(draft, previousStore, weeklySchedule),
+    );
   }, [weeklySchedule]);
 
   const dirty = useMemo(
@@ -109,17 +117,15 @@ export default function ScheduleScreen() {
     }
   }
 
-  function confirmRemove(clearAssociations: boolean) {
+  function confirmRemove() {
     if (!confirm || (confirm.kind !== 'remove_unused' && confirm.kind !== 'remove_in_use')) {
       return;
     }
     const { templateId } = confirm;
-    if (clearAssociations) {
-      setDraftSchedule((prev) => scheduleWithoutTemplate(prev, templateId));
-    }
-    removeDayTypeTemplate(templateId);
-    // keep draft in sync with store cleanup
+    // Always prune draft associations so in-use removal cannot leave broken refs,
+    // even when the agenda draft has other unsaved weekday edits.
     setDraftSchedule((prev) => scheduleWithoutTemplate(prev, templateId));
+    removeDayTypeTemplate(templateId);
     setConfirm(null);
   }
 
@@ -268,7 +274,7 @@ export default function ScheduleScreen() {
         actions={[
           {
             label: 'Remover',
-            onPress: () => confirmRemove(false),
+            onPress: () => confirmRemove(),
           },
           { label: 'Cancelar', onPress: () => setConfirm(null), variant: 'outline' },
         ]}
@@ -286,7 +292,7 @@ export default function ScheduleScreen() {
         actions={[
           {
             label: 'Remover e usar meta padrão',
-            onPress: () => confirmRemove(true),
+            onPress: () => confirmRemove(),
           },
           { label: 'Cancelar', onPress: () => setConfirm(null), variant: 'outline' },
         ]}

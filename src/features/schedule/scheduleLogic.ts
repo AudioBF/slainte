@@ -337,6 +337,18 @@ export function applyPersonalSeedState(): DayTargetsState {
   return createPersonalDayTargetSeed();
 }
 
+/** Preserve unsaved agenda drafts when the store schedule changes underneath. */
+export function nextDraftAfterStoreScheduleChange(
+  draft: WeeklySchedule,
+  previousStore: WeeklySchedule,
+  nextStore: WeeklySchedule,
+): WeeklySchedule {
+  if (schedulesEqual(draft, previousStore)) {
+    return cloneWeeklySchedule(nextStore);
+  }
+  return draft;
+}
+
 export function activeTemplatesOnly(templates: DayTypeTemplate[]): DayTypeTemplate[] {
   return templates.filter((t) => t.isActive);
 }

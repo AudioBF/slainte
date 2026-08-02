@@ -7,6 +7,7 @@ import {
   canDeactivateTemplate,
   emptyTemplateDraft,
   hasExistingDayTargetsConfig,
+  nextDraftAfterStoreScheduleChange,
   planRemoveDayTypeTemplate,
   recalculateDraftCarbs,
   resolveScheduleRow,
@@ -174,5 +175,20 @@ describe('seed pessoal', () => {
     const b = applyPersonalSeedState();
     expect(a.weeklySchedule.entries).toEqual(b.weeklySchedule.entries);
     expect(schedulesEqual(a.weeklySchedule, b.weeklySchedule)).toBe(true);
+  });
+});
+
+describe('nextDraftAfterStoreScheduleChange', () => {
+  it('sincroniza draft limpo com o novo store', () => {
+    const store = { entries: [{ weekday: 0 as const, templateId: 'a' }] };
+    const next = { entries: [{ weekday: 0 as const, templateId: 'b' }] };
+    expect(nextDraftAfterStoreScheduleChange(store, store, next)).toEqual(next);
+  });
+
+  it('preserva edições locais não salvas', () => {
+    const previousStore = { entries: [{ weekday: 0 as const, templateId: 'a' }] };
+    const draft = { entries: [{ weekday: 0 as const, templateId: 'local' }] };
+    const nextStore = { entries: [] };
+    expect(nextDraftAfterStoreScheduleChange(draft, previousStore, nextStore)).toEqual(draft);
   });
 });

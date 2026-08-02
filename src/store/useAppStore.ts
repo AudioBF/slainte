@@ -255,13 +255,18 @@ export const useAppStore = create<AppState>()(
         }),
 
       removeDayTypeTemplate: (templateId) =>
-        set((s) => ({
-          dayTypeTemplates: s.dayTypeTemplates.filter((t) => t.id !== templateId),
-          weeklySchedule: {
-            ...s.weeklySchedule,
-            entries: s.weeklySchedule.entries.filter((e) => e.templateId !== templateId),
-          },
-        })),
+        set((s) => {
+          const dayTypeTemplates = s.dayTypeTemplates.filter((t) => t.id !== templateId);
+          const entries = s.weeklySchedule.entries.filter((e) => e.templateId !== templateId);
+          // Avoid rewriting weeklySchedule when unused — preserves agenda draft identity.
+          if (entries.length === s.weeklySchedule.entries.length) {
+            return { dayTypeTemplates };
+          }
+          return {
+            dayTypeTemplates,
+            weeklySchedule: { ...s.weeklySchedule, entries },
+          };
+        }),
 
       setWeeklySchedule: (schedule) => set({ weeklySchedule: schedule }),
 
