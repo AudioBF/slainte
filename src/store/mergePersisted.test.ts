@@ -21,6 +21,7 @@ function baseSlice(overrides: Partial<PersistedSlice> = {}): PersistedSlice {
     recipes: [],
     shopping: [],
     mealPlanSummary: null,
+    mealPlanGenerationMeta: null,
     selectedHistoryDate: '2026-08-01',
     dayTypeTemplates: [],
     weeklySchedule: { entries: [] },
@@ -128,6 +129,31 @@ describe('mergeDayTargets / legacy cloud pull', () => {
     const emptyLocal = mergeWithLegacyCloudSync(baseSlice(), cloudLegacy);
     expect(emptyLocal.dayTypeTemplates).toEqual([]);
     expect(emptyLocal.weeklySchedule.entries).toEqual([]);
+  });
+
+  it('cloud legado preserva mealPlanGenerationMeta local', () => {
+    const meta = {
+      contractVersion: 2 as const,
+      generatedAt: '2026-07-29T12:00:00.000Z',
+      fallbackDailyGoals: DEFAULT_DAILY_GOALS.maintain,
+      perDay: [0, 1, 2, 3, 4, 5, 6].map((dayIndex) => ({
+        dayIndex: dayIndex as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+        dailyGoals: DEFAULT_DAILY_GOALS.maintain,
+        source: 'weekly_schedule' as const,
+      })),
+    };
+    const local = baseSlice({ mealPlanGenerationMeta: meta });
+    const cloudLegacy = {
+      profile: createDefaultAccount(),
+      loggedMeals: [],
+      plannedMeals: [],
+      recipes: [],
+      shopping: [],
+      mealPlanSummary: null as string | null,
+      selectedHistoryDate: '2026-08-03',
+    };
+    const merged = mergeWithLegacyCloudSync(local, cloudLegacy);
+    expect(merged.mealPlanGenerationMeta?.contractVersion).toBe(2);
   });
 
   it('cloud vazio preserva day targets locais', () => {

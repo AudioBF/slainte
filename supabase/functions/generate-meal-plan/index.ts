@@ -9,30 +9,32 @@ import {
 import { generateStructuredJson, toGeminiErrorInfo } from '../_shared/gemini.ts';
 import { jsonError, jsonOk, readJson } from '../_shared/http.ts';
 import {
+  decideMealPlanCorrection,
+  validateMealPlanAgainstDailyTargets,
+} from '../_shared/meal-plan-targets.ts';
+import {
+  buildMealPlanBatchRepairPrompt,
   buildMealPlanPrompt,
+  buildMealPlanPromptV2,
   buildMealPlanRetryPrompt,
   mealPlanResponseSchema,
   normalizeLightweightMealPlan,
   parseMealPlanResult,
   type MealPlanResult,
+  type NormalizedMealPlanRequest,
   type UserProfile,
   validateMealPlanRequest,
   validateMealPlanVariety,
 } from '../_shared/meal-plan.ts';
 
-/** At most one variety retry (2 Gemini generations) when budget allows. */
 const MAX_VARIETY_ATTEMPTS = 1;
 
-async function requestMealPlan(
+async function requestMealPlanWithPrompt(
+  prompt: string,
   profile: UserProfile,
   budget: ExecutionBudget,
   varietyAttempt: number,
-  issues?: string[],
 ): Promise<MealPlanResult> {
-  const prompt = issues?.length
-    ? buildMealPlanRetryPrompt(profile, issues)
-    : buildMealPlanPrompt(profile);
-
   const raw = await generateStructuredJson<unknown>({
     task: 'mealPlan',
     prompt,
@@ -41,12 +43,33 @@ async function requestMealPlan(
     budget,
     varietyAttempt,
   });
-
-  const parsed = parseMealPlanResult(raw);
-  return parsed;
+  return parseMealPlanResult(raw);
 }
 
-async function generateMealPlan(profile: UserProfile, budget: ExecutionBudget): Promise<MealPlanResult> {
+function attachMeta(
+  plan: MealPlanResult,
+  req: NormalizedMealPlanRequest,
+  validationStatus: NonNullable<MealPlanResult['generationMeta']>['validationStatus'],
+  repairedDays?: number[],
+): MealPlanResult {
+  const weekStart = req.dailyTargets.find((t) => t.dayIndex === 0)?.dateISO;
+  return {
+    ...plan,
+    generationMeta: {
+      contractVersion: req.contractVersion,
+      referenceWeekStartISO: weekStart,
+      validationStatus,
+      repairedDays,
+      usedFallbackDays: req.usedFallbackDays,
+    },
+  };
+}
+
+async function generateMealPlanV1(
+  req: NormalizedMealPlanRequest,
+  budget: ExecutionBudget,
+): Promise<MealPlanResult> {
+  const profile = req.profile;
   let lastIssues: string[] = [];
   let lastError: unknown;
 
@@ -64,35 +87,122 @@ async function generateMealPlan(profile: UserProfile, budget: ExecutionBudget): 
     }
 
     try {
-      const plan = await requestMealPlan(profile, budget, attempt, attempt > 0 ? lastIssues : undefined);
+      const prompt =
+        attempt > 0
+          ? buildMealPlanRetryPrompt(profile, lastIssues)
+          : buildMealPlanPrompt(profile);
+      const plan = await requestMealPlanWithPrompt(prompt, profile, budget, attempt);
       const validation = validateMealPlanVariety(plan);
 
       if (validation.ok) {
-        return plan;
+        return attachMeta(plan, req, 'ok');
       }
 
       lastIssues = validation.issues;
 
       if (attempt === MAX_VARIETY_ATTEMPTS) {
-        return normalizeLightweightMealPlan({
-          ...plan,
-          summary:
-            (plan.summary ? `${plan.summary} ` : '') +
-            'Plano gerado com algumas repetições — você pode gerar novamente para outra versão.',
-        });
+        return attachMeta(
+          normalizeLightweightMealPlan({
+            ...plan,
+            summary:
+              (plan.summary ? `${plan.summary} ` : '') +
+              'Plano gerado com algumas repetições — você pode gerar novamente para outra versão.',
+          }),
+          req,
+          'soft',
+        );
       }
     } catch (error) {
       lastError = error;
-      if (isExecutionBudgetExceeded(error)) {
-        throw error;
-      }
-      if (attempt === MAX_VARIETY_ATTEMPTS) {
-        throw error;
-      }
+      if (isExecutionBudgetExceeded(error)) throw error;
+      if (attempt === MAX_VARIETY_ATTEMPTS) throw error;
     }
   }
 
   throw lastError ?? new Error('Não foi possível gerar um cardápio válido.');
+}
+
+async function generateMealPlanV2(
+  req: NormalizedMealPlanRequest,
+  budget: ExecutionBudget,
+): Promise<MealPlanResult> {
+  const profile = req.profile;
+  const initialPrompt = buildMealPlanPromptV2(profile, req.dailyTargets);
+  const plan = await requestMealPlanWithPrompt(initialPrompt, profile, budget, 0);
+
+  const variety = validateMealPlanVariety(plan);
+  const macro = validateMealPlanAgainstDailyTargets({
+    plannedMeals: plan.plannedMeals,
+    dailyTargets: req.dailyTargets,
+  });
+
+  const decision = decideMealPlanCorrection(macro, variety.ok);
+
+  if (decision === 'accept') {
+    return attachMeta(plan, req, macro.severity === 'soft' ? 'soft' : 'ok');
+  }
+
+  if (!budget.canStartCall(MIN_BUDGET_FOR_VARIETY_RETRY_MS)) {
+    throw new Error('Não foi possível validar o cardápio multi-meta dentro do tempo disponível.');
+  }
+
+  if (decision === 'retry_full') {
+    const issues = [
+      ...(!variety.ok ? variety.issues : []),
+      ...macro.perDay.filter((d) => d.status === 'hard').flatMap((d) => d.reasons),
+    ];
+    const retryPrompt =
+      req.contractVersion === 2
+        ? `${buildMealPlanPromptV2(profile, req.dailyTargets)}
+
+## CORREÇÃO NECESSÁRIA
+${issues.map((i) => `- ${i}`).join('\n')}
+
+Gere um plano NOVO completo.`
+        : buildMealPlanRetryPrompt(profile, issues);
+    const repaired = await requestMealPlanWithPrompt(retryPrompt, profile, budget, 1);
+    const v2 = validateMealPlanVariety(repaired);
+    const m2 = validateMealPlanAgainstDailyTargets({
+      plannedMeals: repaired.plannedMeals,
+      dailyTargets: req.dailyTargets,
+    });
+    if (!v2.ok || !m2.valid) {
+      throw new Error(
+        'O cardápio gerado não atendeu às metas diárias. Tente novamente ou ajuste a agenda.',
+      );
+    }
+    return attachMeta(repaired, req, 'repaired');
+  }
+
+  if (decision === 'repair_batch') {
+    const invalidDays = macro.invalidDays;
+    const issues = macro.perDay
+      .filter((d) => d.status === 'hard')
+      .flatMap((d) => d.reasons.map((r) => `dayIndex ${d.dayIndex}: ${r}`));
+    const repairPrompt = buildMealPlanBatchRepairPrompt(
+      profile,
+      req.dailyTargets,
+      invalidDays,
+      JSON.stringify({ plannedMeals: plan.plannedMeals, summary: plan.summary }),
+      issues,
+    );
+    const repaired = await requestMealPlanWithPrompt(repairPrompt, profile, budget, 1);
+    const v2 = validateMealPlanVariety(repaired);
+    const m2 = validateMealPlanAgainstDailyTargets({
+      plannedMeals: repaired.plannedMeals,
+      dailyTargets: req.dailyTargets,
+    });
+    if (!v2.ok || !m2.valid) {
+      throw new Error(
+        'O cardápio gerado não atendeu às metas diárias. Tente novamente ou ajuste a agenda.',
+      );
+    }
+    return attachMeta(repaired, req, 'repaired', invalidDays);
+  }
+
+  throw new Error(
+    'O cardápio gerado não atendeu às metas diárias. Tente novamente ou ajuste a agenda.',
+  );
 }
 
 function isExecutionBudgetExceeded(error: unknown): boolean {
@@ -149,7 +259,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const plan = await generateMealPlan(request.value.profile, budget);
+    const plan =
+      request.value.contractVersion === 2
+        ? await generateMealPlanV2(request.value, budget)
+        : await generateMealPlanV1(request.value, budget);
     logMealPlanBudget({
       requestId,
       attempt: 0,
@@ -172,6 +285,13 @@ Deno.serve(async (req) => {
       event: 'error',
       code: info.code,
     });
+    // Controlled validation failures from multi-target
+    if (
+      error instanceof Error &&
+      /metas diárias|multi-meta|cardápio gerado não atendeu/i.test(error.message)
+    ) {
+      return jsonError('VALIDATION', error.message, 422);
+    }
     return jsonError(info.code, info.message, info.status);
   }
 });

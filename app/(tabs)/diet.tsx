@@ -21,6 +21,8 @@ import {
   resolveGoalChangePatch,
   type GoalChangeDecision,
 } from '../../src/domain/nutrition-targets';
+import { isMultiTargetMealPlanEnabled } from '../../src/domain/meal-plan-targets';
+import { env } from '../../src/lib/env';
 import { useToast } from '../../src/components/ToastProvider';
 import { isPlannedMealLoggedToday, todayDayIndex } from '../../src/store/selectors';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -53,6 +55,7 @@ export default function DietScreen() {
   const recipes = useAppStore((s) => s.recipes);
   const selectedDietDay = useAppStore((s) => s.selectedDietDay);
   const setSelectedDietDay = useAppStore((s) => s.setSelectedDietDay);
+  const mealPlanGenerationMeta = useAppStore((s) => s.mealPlanGenerationMeta);
   const { generate, loading: generating, error } = useMealPlanGenerator();
   const {
     generateForMeal,
@@ -67,9 +70,20 @@ export default function DietScreen() {
   const [pendingGoal, setPendingGoal] = useState<ProfileGoal | null>(null);
   const [goalDecisionBusy, setGoalDecisionBusy] = useState(false);
 
+  const multiTargetEffective = isMultiTargetMealPlanEnabled(
+    env.useDayTargets,
+    env.useMultiTargetMealPlan,
+  );
+  const dayOnMultiOff = env.useDayTargets && !env.useMultiTargetMealPlan;
+
   const hasPlan = plannedMeals.length > 0;
   const dayMeals = plannedMeals.filter((m) => m.dayIndex === selectedDietDay);
   const canRegisterToday = selectedDietDay === todayDayIndex();
+  const selectedDayMeta = mealPlanGenerationMeta?.perDay.find(
+    (d) => d.dayIndex === selectedDietDay,
+  );
+  const selectedDayLabel =
+    multiTargetEffective && selectedDayMeta?.label ? selectedDayMeta.label : null;
 
   async function handleGenerate() {
     try {
@@ -156,6 +170,17 @@ export default function DietScreen() {
         }
       >
         <Card flat>
+          {multiTargetEffective ? (
+            <Text style={styles.multiHint} accessibilityLabel="Cardápio multi-meta">
+              Cardápio baseado nas metas da sua agenda semanal.
+            </Text>
+          ) : null}
+          {dayOnMultiOff ? (
+            <Text style={styles.multiHint} accessibilityLabel="Cardápio meta padrão">
+              O cardápio ainda usa a meta padrão do perfil.
+            </Text>
+          ) : null}
+
           <Text style={typography.label}>Objetivo</Text>
           <ChipGroup
             options={GOAL_OPTIONS}
@@ -209,6 +234,9 @@ export default function DietScreen() {
               onChange={setSelectedDietDay}
               mealCount={dayMeals.length}
             />
+            {selectedDayLabel ? (
+              <Text style={styles.dayMetaHint}>{selectedDayLabel}</Text>
+            ) : null}
             {!canRegisterToday ? (
               <Text style={styles.registerHint}>
                 Só dá para registrar refeições de hoje aqui.
@@ -329,6 +357,16 @@ export default function DietScreen() {
 const styles = StyleSheet.create({
   summaryCard: {
     backgroundColor: colors.cream,
+  },
+  multiHint: {
+    ...typography.caption,
+    color: colors.sage,
+    marginBottom: spacing.md,
+  },
+  dayMetaHint: {
+    ...typography.caption,
+    color: colors.sage,
+    marginTop: spacing.sm,
   },
   planEstimateHint: {
     ...typography.caption,

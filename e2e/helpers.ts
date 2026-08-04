@@ -68,6 +68,7 @@ export function createSeedState(profile: SeedProfile = {}) {
       recipes: [],
       shopping: [],
       mealPlanSummary: null,
+      mealPlanGenerationMeta: null,
       selectedHistoryDate: now.slice(0, 10),
     },
     version: 2,

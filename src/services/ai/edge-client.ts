@@ -40,9 +40,26 @@ type GenerateShoppingListBody =
       plannedMeals: Array<Pick<PlannedMeal, 'name' | 'slot' | 'dayIndex'>>;
     };
 
-type GenerateMealPlanBody = {
-  profile: UserProfile;
-};
+/** V1 mono-meta (legado) ou V2 multi-meta (contractVersion: 2). */
+type GenerateMealPlanBody =
+  | {
+      profile: UserProfile;
+      contractVersion?: 1;
+    }
+  | {
+      contractVersion: 2;
+      profile: Pick<UserProfile, 'goal' | 'restrictions'>;
+      fallbackDailyGoals: UserProfile['dailyGoals'];
+      dailyTargets: Array<{
+        dayIndex: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        dateISO?: string;
+        dailyGoals: UserProfile['dailyGoals'];
+        source: string;
+        templateId?: string | null;
+        dayTypeCode?: string | null;
+        label?: string | null;
+      }>;
+    };
 
 type GenerateRecipeBody = {
   profile: UserProfile;

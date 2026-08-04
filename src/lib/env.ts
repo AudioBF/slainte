@@ -18,13 +18,25 @@
  * EXPO_PUBLIC_USE_DAY_TARGETS (default OFF — só ON com "true"):
  * - ON: Hoje/Semana usam meta efetiva por data (override → agenda → perfil).
  * - OFF: Hoje/Semana usam profile.dailyGoals (source flag_off); /schedule não altera metas.
- * - Dieta/cardápio permanece mono-meta (Sprint 2C.3).
+ *
+ * EXPO_PUBLIC_USE_MULTI_TARGET_MEAL_PLAN (default OFF — só ON com "true"):
+ * - Multi-target efetivo = useDayTargets && useMultiTargetMealPlan.
+ * - Ambos ON: Dieta gera cardápio V2 com metas por dia (exige Edge, exceto mock/E2E).
+ * - Caso contrário: Dieta permanece V1 mono-meta.
  */
 import { parseDayTargetsFlag } from '../domain/day-targets';
+import {
+  isMultiTargetMealPlanEnabled,
+  parseMultiTargetMealPlanFlag,
+} from '../domain/meal-plan-targets';
 import { parseMacroConsistencyFlag } from './parseMacroConsistencyFlag';
 
 export { parseMacroConsistencyFlag } from './parseMacroConsistencyFlag';
 export { parseDayTargetsFlag } from '../domain/day-targets';
+export {
+  parseMultiTargetMealPlanFlag,
+  isMultiTargetMealPlanEnabled,
+} from '../domain/meal-plan-targets';
 
 export const env = {
   geminiApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '',
@@ -34,10 +46,18 @@ export const env = {
     process.env.EXPO_PUBLIC_USE_MACRO_CONSISTENCY,
   ),
   useDayTargets: parseDayTargetsFlag(process.env.EXPO_PUBLIC_USE_DAY_TARGETS),
+  useMultiTargetMealPlan: parseMultiTargetMealPlanFlag(
+    process.env.EXPO_PUBLIC_USE_MULTI_TARGET_MEAL_PLAN,
+  ),
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
   isDev: __DEV__,
 } as const;
+
+/** Multi-target de cardápio só com DAY_TARGETS + MULTI_TARGET ambos ON. */
+export function isMultiTargetMealPlanEffective(): boolean {
+  return isMultiTargetMealPlanEnabled(env.useDayTargets, env.useMultiTargetMealPlan);
+}
 
 export function hasGeminiKey(): boolean {
   return env.geminiApiKey.length > 0;

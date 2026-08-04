@@ -6,6 +6,10 @@ import {
   type WeeklyScheduleEntry,
   type Weekday,
 } from '../domain/day-targets';
+import {
+  normalizeMealPlanGenerationMeta,
+  type MealPlanGenerationMeta,
+} from '../domain/meal-plan-targets';
 import type { UserAccount } from '../features/profile/types';
 import type { LoggedMeal, MacroGoals, PlannedMeal, Recipe, ShoppingItem } from '../types';
 
@@ -16,11 +20,19 @@ export type PersistedSlice = {
   recipes: Recipe[];
   shopping: ShoppingItem[];
   mealPlanSummary: string | null;
+  /** Device-local snapshot of generation targets; never synced to user_sync. */
+  mealPlanGenerationMeta: MealPlanGenerationMeta | null;
   selectedHistoryDate: string;
   dayTypeTemplates: DayTypeTemplate[];
   weeklySchedule: WeeklySchedule;
   dailyTargetOverrides: DailyNutritionTarget[];
 };
+
+export function normalizeMealPlanGenerationMetaField(
+  value: unknown,
+): MealPlanGenerationMeta | null {
+  return normalizeMealPlanGenerationMeta(value);
+}
 
 function isMacroGoals(value: unknown): value is MacroGoals {
   if (!value || typeof value !== 'object') return false;
@@ -246,24 +258,31 @@ export function mergePersistedSlice(local: PersistedSlice, cloud: PersistedSlice
     recipes: mergeRecipes(local.recipes, cloud.recipes),
     shopping: pickRicherArray(local.shopping, cloud.shopping),
     mealPlanSummary: cloud.mealPlanSummary ?? local.mealPlanSummary,
+    // Snapshot é device-local — cloud legado nunca envia o campo.
+    mealPlanGenerationMeta:
+      local.mealPlanGenerationMeta ?? cloud.mealPlanGenerationMeta ?? null,
     selectedHistoryDate: cloud.selectedHistoryDate || local.selectedHistoryDate,
     ...dayTargets,
   };
 }
 
 /**
- * Simula merge de um `user_sync` antigo (sem colunas day-targets).
+ * Simula merge de um `user_sync` antigo (sem colunas day-targets / snapshot).
  * Usado por sync.ts e testes de compatibilidade.
  */
 export function mergeWithLegacyCloudSync(
   local: PersistedSlice,
   cloudWithoutDayTargets: Omit<
     PersistedSlice,
-    'dayTypeTemplates' | 'weeklySchedule' | 'dailyTargetOverrides'
+    | 'dayTypeTemplates'
+    | 'weeklySchedule'
+    | 'dailyTargetOverrides'
+    | 'mealPlanGenerationMeta'
   >,
 ): PersistedSlice {
   return mergePersistedSlice(local, {
     ...cloudWithoutDayTargets,
     ...createEmptyDayTargetsState(),
+    mealPlanGenerationMeta: null,
   });
 }
