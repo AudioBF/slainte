@@ -13,11 +13,11 @@ Integração de metas por tipo de dia em **Hoje** e **Semana** (antigos 2C.1 + 2
 - UI discreta de label em Hoje (flag ON)
 - TrendChart com meta por dia (flag ON)
 
-**Fora de escopo (Sprint 2C.3)**
+**Fora de escopo (histórico — concluído em Sprint 2C.3)**
 
-- Dieta usando metas diferentes por dia
-- Geração de cardápio multi-meta / prompts / Edge Functions
-- Sync cloud de day targets, migrations, RLS, Supabase schema
+- Dieta usando metas diferentes por dia → ver [meal-plan-multi-target.md](./meal-plan-multi-target.md)
+- Geração de cardápio multi-meta / prompts / Edge Functions (código local; publicação em rollout separado)
+- Sync cloud de day targets, migrations, RLS, Supabase schema (ainda fora)
 
 ## Feature flag
 
@@ -25,8 +25,8 @@ Integração de metas por tipo de dia em **Hoje** e **Semana** (antigos 2C.1 + 2
 
 | Flag | Hoje / Semana | Dieta / cardápio |
 |------|---------------|------------------|
-| OFF | `profile.dailyGoals` (equivalente pós-2B); sem label de tipo de dia | Meta única do perfil |
-| ON | Meta efetiva por data (override → agenda → perfil) | Continua mono-meta |
+| OFF | `profile.dailyGoals` (equivalente pós-2B); sem label de tipo de dia | Meta única do perfil (V1) |
+| ON | Meta efetiva por data (override → agenda → perfil) | Continua V1 até `USE_MULTI_TARGET_MEAL_PLAN` também ON |
 
 Ao desligar a flag: templates e agenda **permanecem** salvos no dispositivo; telas voltam ao perfil; nenhum dado é apagado.
 
