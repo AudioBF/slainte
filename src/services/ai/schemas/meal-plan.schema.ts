@@ -34,10 +34,21 @@ const plannedMealSchema = z.object({
   fat: macroInt.pipe(z.number().nonnegative()),
 });
 
+const generationMetaSchema = z
+  .object({
+    contractVersion: z.union([z.literal(1), z.literal(2)]),
+    referenceWeekStartISO: z.string().optional(),
+    validationStatus: z.enum(['ok', 'soft', 'repaired', 'rejected']),
+    repairedDays: z.array(z.number()).optional(),
+    usedFallbackDays: z.array(z.number()).optional(),
+  })
+  .optional();
+
 const mealPlanInputSchema = z.object({
   recipes: z.array(recipeSchema).optional(),
   plannedMeals: z.array(plannedMealSchema),
   summary: z.string().optional(),
+  generationMeta: generationMetaSchema,
 });
 
 export function normalizeLightweightMealPlan(
@@ -46,11 +57,13 @@ export function normalizeLightweightMealPlan(
   recipes: [];
   plannedMeals: Omit<z.infer<typeof plannedMealSchema>, 'recipeId'>[];
   summary?: string;
+  generationMeta?: z.infer<typeof generationMetaSchema>;
 } {
   return {
     recipes: [],
     summary: input.summary,
     plannedMeals: input.plannedMeals.map(({ recipeId: _recipeId, ...meal }) => meal),
+    generationMeta: input.generationMeta,
   };
 }
 

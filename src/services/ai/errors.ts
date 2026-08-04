@@ -146,6 +146,10 @@ export function toMealPlanUserMessage(error: unknown): string {
   const edgeCode = mealPlanEdgeCode(error);
   const message = getErrorMessage(error);
 
+  if (/metas diferentes por dia exige o serviço seguro/i.test(message)) {
+    return message;
+  }
+
   if (edgeCode === 'UNAUTHORIZED') {
     return 'Entre na conta para gerar o cardápio.';
   }

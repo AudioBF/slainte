@@ -1,7 +1,14 @@
 export { analyzeMealPhoto, mapAnalysisToComponents } from './analyze-meal-photo';
 export type { AnalyzeMealPhotoInput } from './analyze-meal-photo';
 
-export { generateMealPlan } from './generate-meal-plan';
+export {
+  generateMealPlan,
+  MULTI_TARGET_REQUIRES_EDGE_MESSAGE,
+} from './generate-meal-plan';
+export type {
+  GenerateMealPlanContext,
+  GenerateMealPlanOutcome,
+} from './generate-meal-plan';
 export type { MealPlanResult } from './schemas/meal-plan.schema';
 
 export { generateRecipeForMeal } from './generate-recipe';
