@@ -26,8 +26,10 @@ import {
 } from '../types';
 import {
   normalizeDayTargetsFields,
+  normalizeMealPlanGenerationMetaField,
   type PersistedSlice,
 } from './mergePersisted';
+import type { MealPlanGenerationMeta } from '../domain/meal-plan-targets';
 import {
   selectTodayActual,
   selectTodayPlanned,
@@ -87,7 +89,13 @@ type AppState = PersistedSlice & {
   updateLoggedComponent: (mealId: string, componentId: string, patch: Partial<MealComponent>) => void;
   removeLoggedComponent: (mealId: string, componentId: string) => void;
   addLoggedComponent: (mealId: string, component: MealComponent) => void;
-  setMealPlan: (plannedMeals: PlannedMeal[], recipes: Recipe[], summary?: string) => void;
+  setMealPlan: (
+    plannedMeals: PlannedMeal[],
+    recipes: Recipe[],
+    summary?: string,
+    generationMeta?: MealPlanGenerationMeta | null,
+  ) => void;
+  setMealPlanGenerationMeta: (meta: MealPlanGenerationMeta | null) => void;
   upsertRecipe: (recipe: Recipe) => void;
   linkPlannedMealRecipe: (plannedMealId: string, recipeId: string) => void;
   saveGeneratedRecipe: (plannedMealId: string, recipe: Recipe) => void;
@@ -121,6 +129,7 @@ export const useAppStore = create<AppState>()(
       selectedDietDay: todayDayIndex(),
       viewMode: 'today',
       mealPlanSummary: null,
+      mealPlanGenerationMeta: null,
       selectedHistoryDate: todayISO(),
       lastSyncedAt: null,
 
@@ -142,6 +151,7 @@ export const useAppStore = create<AppState>()(
           recipes: [],
           shopping: [],
           mealPlanSummary: null,
+          mealPlanGenerationMeta: null,
           selectedHistoryDate: todayISO(),
         })),
 
@@ -186,14 +196,20 @@ export const useAppStore = create<AppState>()(
           };
         }),
 
-      setMealPlan: (plannedMeals, recipes, summary) =>
+      setMealPlan: (plannedMeals, recipes, summary, generationMeta) =>
         set((s) => ({
           plannedMeals,
           recipes,
           selectedDietDay: todayDayIndex(),
           mealPlanSummary: summary ?? null,
+          mealPlanGenerationMeta:
+            generationMeta === undefined
+              ? s.mealPlanGenerationMeta
+              : generationMeta,
           profile: { ...s.profile, updatedAt: new Date().toISOString() },
         })),
+
+      setMealPlanGenerationMeta: (meta) => set({ mealPlanGenerationMeta: meta }),
 
       upsertRecipe: (recipe) =>
         set((s) => {
@@ -238,6 +254,9 @@ export const useAppStore = create<AppState>()(
         set({
           ...slice,
           ...normalizeDayTargetsFields(slice),
+          mealPlanGenerationMeta: normalizeMealPlanGenerationMetaField(
+            slice.mealPlanGenerationMeta,
+          ),
         }),
 
       setLastSyncedAt: (iso) => set({ lastSyncedAt: iso }),
@@ -456,6 +475,9 @@ export const useAppStore = create<AppState>()(
           profile,
           selectedHistoryDate: state.selectedHistoryDate ?? todayISO(),
           ...normalizeDayTargetsFields(state),
+          mealPlanGenerationMeta: normalizeMealPlanGenerationMetaField(
+            state.mealPlanGenerationMeta,
+          ),
         } as PersistedSlice;
       },
       merge: (persisted, current) => {
@@ -464,6 +486,9 @@ export const useAppStore = create<AppState>()(
           ...current,
           ...state,
           ...normalizeDayTargetsFields(state),
+          mealPlanGenerationMeta: normalizeMealPlanGenerationMetaField(
+            state.mealPlanGenerationMeta,
+          ),
         };
       },
       partialize: (s) => ({
@@ -473,8 +498,9 @@ export const useAppStore = create<AppState>()(
         recipes: s.recipes,
         shopping: s.shopping,
         mealPlanSummary: s.mealPlanSummary,
+        mealPlanGenerationMeta: s.mealPlanGenerationMeta,
         selectedHistoryDate: s.selectedHistoryDate,
-        // Day targets: device-local only (DAY_TARGETS_SYNC_STATUS). Not in user_sync.
+        // Day targets + meal-plan snapshot: device-local only. Not in user_sync.
         dayTypeTemplates: s.dayTypeTemplates,
         weeklySchedule: s.weeklySchedule,
         dailyTargetOverrides: s.dailyTargetOverrides,
@@ -503,6 +529,7 @@ export function getPersistedSlice(state: AppState): PersistedSlice {
     recipes: state.recipes,
     shopping: state.shopping,
     mealPlanSummary: state.mealPlanSummary,
+    mealPlanGenerationMeta: state.mealPlanGenerationMeta,
     selectedHistoryDate: state.selectedHistoryDate,
     dayTypeTemplates: state.dayTypeTemplates,
     weeklySchedule: state.weeklySchedule,

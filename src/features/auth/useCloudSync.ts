@@ -20,6 +20,8 @@ export function useCloudSync() {
       // Day targets ainda não syncam: limpar na troca de conta evita vazamento device-local.
       if (shouldResetDayTargetsOnUserChange(lastUserRef.current, user.id)) {
         useAppStore.getState().resetDayTargets();
+        // Snapshot de geração também é device-local — limpar na troca de conta.
+        useAppStore.getState().setMealPlanGenerationMeta(null);
       }
       lastUserRef.current = user.id;
       syncWithCloud(user.id).catch(() => undefined);
