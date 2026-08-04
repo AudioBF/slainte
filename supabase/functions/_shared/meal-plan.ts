@@ -69,6 +69,13 @@ export type MealPlanResult = {
   recipes: [];
   plannedMeals: Omit<z.infer<typeof plannedMealSchema>, 'recipeId'>[];
   summary?: string;
+  generationMeta?: {
+    contractVersion: 1 | 2;
+    referenceWeekStartISO?: string;
+    validationStatus: 'ok' | 'soft' | 'repaired' | 'rejected';
+    repairedDays?: number[];
+    usedFallbackDays?: number[];
+  };
 };
 
 export function normalizeLightweightMealPlan(
@@ -120,21 +127,120 @@ const generateMealPlanRequestSchema = z.object({
   profile: userProfileSchema,
 });
 
+const mealPlanDayTargetSchema = z.object({
+  dayIndex: z.number().int().min(0).max(6),
+  dateISO: z.string().optional(),
+  dailyGoals: macroGoalsSchema,
+  source: z.enum(['date_override', 'weekly_schedule', 'profile_default', 'flag_off']),
+  templateId: z.string().nullable().optional(),
+  dayTypeCode: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+});
+
+const generateMealPlanRequestV2Schema = z.object({
+  contractVersion: z.literal(2),
+  profile: z.object({
+    goal: z.enum(['lose', 'maintain', 'gain']),
+    restrictions: z.string().max(2000),
+  }),
+  fallbackDailyGoals: macroGoalsSchema,
+  dailyTargets: z.array(mealPlanDayTargetSchema).length(7),
+});
+
 export type GenerateMealPlanRequest = {
   profile: UserProfile;
 };
 
+export type GenerateMealPlanRequestV2 = z.infer<typeof generateMealPlanRequestV2Schema>;
+
+export type NormalizedMealPlanRequest = {
+  contractVersion: 1 | 2;
+  profile: UserProfile;
+  fallbackDailyGoals: z.infer<typeof macroGoalsSchema>;
+  dailyTargets: z.infer<typeof mealPlanDayTargetSchema>[];
+  usedFallbackDays: number[];
+};
+
 type ValidationResult =
-  | { ok: true; value: GenerateMealPlanRequest }
+  | { ok: true; value: NormalizedMealPlanRequest }
   | { ok: false; error: string };
 
+function sortAndValidateTargets(
+  targets: z.infer<typeof mealPlanDayTargetSchema>[],
+): { ok: true; sorted: z.infer<typeof mealPlanDayTargetSchema>[] } | { ok: false; error: string } {
+  const seen = new Set<number>();
+  for (const t of targets) {
+    if (seen.has(t.dayIndex)) {
+      return { ok: false, error: `Duplicate dayIndex ${t.dayIndex}.` };
+    }
+    seen.add(t.dayIndex);
+  }
+  for (let i = 0; i <= 6; i++) {
+    if (!seen.has(i)) {
+      return { ok: false, error: `Missing dayIndex ${i}.` };
+    }
+  }
+  const sorted = [...targets].sort((a, b) => a.dayIndex - b.dayIndex);
+  return { ok: true, sorted };
+}
+
+/**
+ * Aceita V1 ({ profile }) ou V2 ({ contractVersion: 2, ... }).
+ * V2 incompleto NÃO cai silenciosamente para V1.
+ */
 export function validateMealPlanRequest(body: unknown): ValidationResult {
+  if (body != null && typeof body === 'object' && 'contractVersion' in body) {
+    const version = (body as { contractVersion?: unknown }).contractVersion;
+    if (version === 2) {
+      const parsed = generateMealPlanRequestV2Schema.safeParse(body);
+      if (!parsed.success) {
+        return { ok: false, error: 'Invalid V2 meal-plan request body.' };
+      }
+      const sorted = sortAndValidateTargets(parsed.data.dailyTargets);
+      if (!sorted.ok) {
+        return { ok: false, error: sorted.error };
+      }
+      const usedFallbackDays = sorted.sorted
+        .filter((t) => t.source === 'profile_default' || t.source === 'flag_off')
+        .map((t) => t.dayIndex);
+      return {
+        ok: true,
+        value: {
+          contractVersion: 2,
+          profile: {
+            goal: parsed.data.profile.goal,
+            restrictions: parsed.data.profile.restrictions,
+            dailyGoals: parsed.data.fallbackDailyGoals,
+          },
+          fallbackDailyGoals: parsed.data.fallbackDailyGoals,
+          dailyTargets: sorted.sorted,
+          usedFallbackDays,
+        },
+      };
+    }
+    return { ok: false, error: 'Unsupported contractVersion.' };
+  }
+
   const parsed = generateMealPlanRequestSchema.safeParse(body);
   if (!parsed.success) {
     return { ok: false, error: 'Invalid request body.' };
   }
-
-  return { ok: true, value: parsed.data };
+  const dailyGoals = parsed.data.profile.dailyGoals;
+  const dailyTargets = [0, 1, 2, 3, 4, 5, 6].map((dayIndex) => ({
+    dayIndex: dayIndex as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+    dailyGoals,
+    source: 'flag_off' as const,
+  }));
+  return {
+    ok: true,
+    value: {
+      contractVersion: 1,
+      profile: parsed.data.profile,
+      fallbackDailyGoals: dailyGoals,
+      dailyTargets,
+      usedFallbackDays: [0, 1, 2, 3, 4, 5, 6],
+    },
+  };
 }
 
 export function buildMealPlanPrompt(profile: UserProfile): string {
@@ -190,6 +296,92 @@ Seu plano anterior foi REJEITADO por falta de variedade:
 ${issues.map((issue) => `- ${issue}`).join('\n')}
 
 Gere um plano NOVO corrigindo todos os pontos. Priorize variedade real — o usuário percebe repetição imediatamente.`;
+}
+
+const WEEK_DAY_LABELS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+
+export function buildMealPlanPromptV2(
+  profile: Pick<UserProfile, 'goal' | 'restrictions'>,
+  dailyTargets: Array<{
+    dayIndex: number;
+    dateISO?: string;
+    dailyGoals: { calories: number; protein: number; carbs: number; fat: number };
+    label?: string | null;
+  }>,
+): string {
+  const dayBlocks = [...dailyTargets]
+    .sort((a, b) => a.dayIndex - b.dayIndex)
+    .map((t) => {
+      const name = WEEK_DAY_LABELS[t.dayIndex] ?? `Dia ${t.dayIndex}`;
+      const label = t.label ? ` — ${t.label}` : '';
+      const date = t.dateISO ? ` (${t.dateISO})` : '';
+      return `${name} (dayIndex ${t.dayIndex})${date}${label}:
+  ${t.dailyGoals.calories} kcal · P ${t.dailyGoals.protein}g · C ${t.dailyGoals.carbs}g · G ${t.dailyGoals.fat}g`;
+    })
+    .join('\n\n');
+
+  return `Você é um nutricionista prático que monta cardápios semanais para moradores de Dublin, Irlanda.
+Escreva como um humano — nomes apetitosos, rotação inteligente, nada de planilha robótica.
+
+## Perfil
+- Objetivo: ${GOAL_LABELS[profile.goal]}
+- Preferências e restrições alimentares: ${profile.restrictions || 'nenhuma informada'}
+
+## Metas por dia (fonte de verdade — cada dia fecha a SUA meta)
+NÃO use média semanal. NÃO compense déficit de um dia em outro.
+Tolerâncias aproximadas por dia: calorias max(150 kcal, 8%); proteína max(8g, 10%); carbs/gordura max(15g/5g, 15%).
+
+${dayBlocks}
+
+## Formato da resposta (IMPORTANTE)
+- Retorne APENAS plannedMeals + summary.
+- NÃO inclua array recipes.
+- NÃO inclua recipeId nas refeições.
+
+## O que é meal-prep (IMPORTANTE)
+Meal-prep NÃO é comer o MESMO prato 7 dias seguidos.
+É variar proteínas e acompanhamentos ao longo da semana, reutilizando preparos quando fizer sentido.
+
+## Regras obrigatórias
+1. 7 dias completos (dayIndex 0=Segunda … 6=Domingo), cada um com café, almoço e jantar (snack opcional)
+2. Mínimo 3 cafés diferentes, 4 almoços diferentes, 4 jantares diferentes na semana
+3. No máximo 2 dias com cardápio 100% idêntico (sobras de prep)
+4. Nomes descritivos o bastante para compras: inclua proteína + base + preparo
+5. Ingredientes encontrados em Lidl, Aldi, Tesco, Dunnes, SuperValu
+6. Horários realistas (HH:MM, 24h)
+7. A soma das refeições de cada dayIndex deve atender à meta DAQUELE dia
+8. Textos em português brasileiro natural
+9. Campo "summary": 2–3 frases humanas explicando a lógica da semana (mencione variação de metas se útil)
+10. Respeite restrições e preferências alimentares rigorosamente
+11. Sugestão automática — não substitui orientação médica
+
+Responda APENAS com JSON válido no schema solicitado.`;
+}
+
+export function buildMealPlanBatchRepairPrompt(
+  profile: Pick<UserProfile, 'goal' | 'restrictions'>,
+  dailyTargets: Array<{
+    dayIndex: number;
+    dateISO?: string;
+    dailyGoals: { calories: number; protein: number; carbs: number; fat: number };
+    label?: string | null;
+  }>,
+  invalidDays: number[],
+  currentPlanJson: string,
+  issues: string[],
+): string {
+  return `${buildMealPlanPromptV2(profile, dailyTargets)}
+
+## REPARO EM LOTE
+Corrija APENAS os dayIndex inválidos: ${invalidDays.join(', ')}.
+Mantenha os demais dias do plano atual inalterados.
+Problemas:
+${issues.map((i) => `- ${i}`).join('\n')}
+
+Plano atual (JSON):
+${currentPlanJson}
+
+Retorne o plano COMPLETO (7 dias) com os dayIndex inválidos corrigidos.`;
 }
 
 type MealPlanValidation = {
